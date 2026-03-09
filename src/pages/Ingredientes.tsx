@@ -19,7 +19,6 @@ const Ingredientes = () => {
   const [unidad, setUnidad] = useState("gr");
   const [cargandoIA, setCargandoIA] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imageTarget, setImageTarget] = useState<string | null>(null);
 
   const filtrados = ingredientes.filter(i =>
     i.nombre.toLowerCase().includes(busqueda.toLowerCase())
@@ -62,17 +61,13 @@ const Ingredientes = () => {
     setDialogOpen(false);
   };
 
-  const handleImageClick = (ingredienteId: string) => {
-    setImageTarget(ingredienteId);
+  const handleScanClick = () => {
     fileInputRef.current?.click();
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !imageTarget) return;
-
-    const ing = ingredientes.find(i => i.id === imageTarget);
-    if (!ing) return;
+    if (!file) return;
 
     setCargandoIA(true);
 
@@ -84,6 +79,8 @@ const Ingredientes = () => {
         reader.readAsDataURL(file);
       });
 
+      const ingredientNames = ingredientes.map(i => i.nombre);
+
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-price`,
         {
@@ -92,7 +89,7 @@ const Ingredientes = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ imageBase64: base64, ingredientName: ing.nombre }),
+          body: JSON.stringify({ imageBase64: base64, ingredientNames }),
         }
       );
 
@@ -103,19 +100,29 @@ const Ingredientes = () => {
 
       const data = await resp.json();
 
-      if (data.precio != null && data.cantidad != null) {
-        actualizarIngrediente(imageTarget, data.precio, data.cantidad);
-        toast.success(
-          `${ing.nombre} actualizado: ${formatCurrency(data.precio)} por ${data.cantidad} ${data.unidad || ing.unidad}. Costos recalculados.`
+      if (data.matched_ingredient && data.precio != null && data.cantidad != null) {
+        const matched = ingredientes.find(
+          i => i.nombre.toLowerCase() === data.matched_ingredient.toLowerCase()
         );
+        if (matched) {
+          actualizarIngrediente(matched.id, data.precio, data.cantidad);
+          toast.success(
+            `"${data.detected_product}" → ${matched.nombre} actualizado: ${formatCurrency(data.precio)} por ${data.cantidad} ${data.unidad || matched.unidad}. Costos recalculados.`
+          );
+        } else {
+          toast.error(`Producto detectado: "${data.detected_product}" pero no coincide con ningún ingrediente del listado.`);
+        }
       } else {
-        toast.error("No se pudo extraer el precio de la imagen. Intentá con otra foto.");
+        toast.error(
+          data.detected_product
+            ? `Producto detectado: "${data.detected_product}" pero no se pudo asociar a ningún ingrediente.`
+            : "No se pudo identificar el producto en la imagen. Intentá con otra foto."
+        );
       }
     } catch (err: any) {
       toast.error(err.message || "Error al procesar la imagen");
     } finally {
       setCargandoIA(false);
-      setImageTarget(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -131,7 +138,7 @@ const Ingredientes = () => {
         onChange={handleImageUpload}
       />
 
-      {/* Search + Add */}
+      {/* Search + Add + Scan */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -143,6 +150,9 @@ const Ingredientes = () => {
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-card text-foreground text-sm font-body border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
+        <Button onClick={handleScanClick} disabled={cargandoIA} size="icon" variant="outline" className="rounded-xl h-[46px] w-[46px] shrink-0">
+          {cargandoIA ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+        </Button>
         <Button onClick={abrirAgregar} size="icon" className="rounded-xl h-[46px] w-[46px] shrink-0">
           <Plus className="w-5 h-5" />
         </Button>
@@ -163,7 +173,7 @@ const Ingredientes = () => {
           <span className="text-right">Precio</span>
           <span className="text-right">Cant.</span>
           <span className="text-right">$/u</span>
-          <span className="w-16"></span>
+          <span className="w-8"></span>
         </div>
         <div className="divide-y divide-border">
           {filtrados.map(ing => (
@@ -172,19 +182,12 @@ const Ingredientes = () => {
               <span className="text-sm text-foreground font-medium text-right w-20">{formatCurrency(ing.precio)}</span>
               <span className="text-sm text-muted-foreground text-right w-14">{ing.cantidad} {ing.unidad}</span>
               <span className="text-sm text-foreground font-medium text-right w-16">{formatCurrency(ing.precioUnitario)}</span>
-              <div className="flex gap-1 w-16 justify-end">
+              <div className="flex gap-1 w-8 justify-end">
                 <button
                   onClick={() => abrirEditar(ing.id)}
                   className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
                 >
                   <Pencil className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => handleImageClick(ing.id)}
-                  disabled={cargandoIA}
-                  className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
-                >
-                  <Camera className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
