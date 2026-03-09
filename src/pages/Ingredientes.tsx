@@ -61,17 +61,13 @@ const Ingredientes = () => {
     setDialogOpen(false);
   };
 
-  const handleImageClick = (ingredienteId: string) => {
-    setImageTarget(ingredienteId);
+  const handleScanClick = () => {
     fileInputRef.current?.click();
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !imageTarget) return;
-
-    const ing = ingredientes.find(i => i.id === imageTarget);
-    if (!ing) return;
+    if (!file) return;
 
     setCargandoIA(true);
 
@@ -83,6 +79,8 @@ const Ingredientes = () => {
         reader.readAsDataURL(file);
       });
 
+      const ingredientNames = ingredientes.map(i => i.nombre);
+
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-price`,
         {
@@ -91,7 +89,7 @@ const Ingredientes = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ imageBase64: base64, ingredientName: ing.nombre }),
+          body: JSON.stringify({ imageBase64: base64, ingredientNames }),
         }
       );
 
@@ -102,19 +100,29 @@ const Ingredientes = () => {
 
       const data = await resp.json();
 
-      if (data.precio != null && data.cantidad != null) {
-        actualizarIngrediente(imageTarget, data.precio, data.cantidad);
-        toast.success(
-          `${ing.nombre} actualizado: ${formatCurrency(data.precio)} por ${data.cantidad} ${data.unidad || ing.unidad}. Costos recalculados.`
+      if (data.matched_ingredient && data.precio != null && data.cantidad != null) {
+        const matched = ingredientes.find(
+          i => i.nombre.toLowerCase() === data.matched_ingredient.toLowerCase()
         );
+        if (matched) {
+          actualizarIngrediente(matched.id, data.precio, data.cantidad);
+          toast.success(
+            `"${data.detected_product}" → ${matched.nombre} actualizado: ${formatCurrency(data.precio)} por ${data.cantidad} ${data.unidad || matched.unidad}. Costos recalculados.`
+          );
+        } else {
+          toast.error(`Producto detectado: "${data.detected_product}" pero no coincide con ningún ingrediente del listado.`);
+        }
       } else {
-        toast.error("No se pudo extraer el precio de la imagen. Intentá con otra foto.");
+        toast.error(
+          data.detected_product
+            ? `Producto detectado: "${data.detected_product}" pero no se pudo asociar a ningún ingrediente.`
+            : "No se pudo identificar el producto en la imagen. Intentá con otra foto."
+        );
       }
     } catch (err: any) {
       toast.error(err.message || "Error al procesar la imagen");
     } finally {
       setCargandoIA(false);
-      setImageTarget(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
