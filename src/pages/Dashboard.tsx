@@ -36,12 +36,20 @@ const Dashboard = () => {
     setDialogOpen(true);
   };
 
-  const confirmarEliminar = (producto: Producto) => {
+  const confirmarEliminar = async (producto: Producto) => {
     if (window.confirm(`¿Eliminar "${producto.nombre}"?`)) {
-      eliminarProducto(producto.id);
+      await eliminarProducto(producto.id);
       toast.success("Producto eliminado");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
