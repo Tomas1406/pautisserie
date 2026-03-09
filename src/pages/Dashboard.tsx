@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formatCurrency, type Producto } from "@/data/productos";
 import { useIngredientes } from "@/context/IngredientesContext";
-import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductoDialog from "@/components/ProductoDialog";
 import { toast } from "sonner";
