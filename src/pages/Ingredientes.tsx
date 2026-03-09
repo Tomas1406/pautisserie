@@ -138,7 +138,7 @@ const Ingredientes = () => {
         onChange={handleImageUpload}
       />
 
-      {/* Search + Add */}
+      {/* Search + Add + Scan */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -150,6 +150,9 @@ const Ingredientes = () => {
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-card text-foreground text-sm font-body border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
+        <Button onClick={handleScanClick} disabled={cargandoIA} size="icon" variant="outline" className="rounded-xl h-[46px] w-[46px] shrink-0">
+          {cargandoIA ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+        </Button>
         <Button onClick={abrirAgregar} size="icon" className="rounded-xl h-[46px] w-[46px] shrink-0">
           <Plus className="w-5 h-5" />
         </Button>
