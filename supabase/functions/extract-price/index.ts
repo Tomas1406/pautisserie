@@ -9,9 +9,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageBase64, ingredientName } = await req.json();
+    const { imageBase64, ingredientNames } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const ingredientList = (ingredientNames as string[]).join(", ");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -24,14 +26,19 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a price extraction assistant. The user will send you a photo of a product (typically from a supermarket or store) and the name of an ingredient. Extract the price and the quantity/weight from the image. Return ONLY valid JSON with this format: {"precio": number, "cantidad": number, "unidad": "gr"|"ml"|"unidad"|"kg"|"lt"}. If you cannot determine a value, use null. The price should be in ARS (Argentine pesos). Convert kg to gr (multiply by 1000) and lt to ml (multiply by 1000) for the cantidad field, and use "gr" or "ml" as the unidad. If the unit is "unidad" keep it as is.`
+            content: `You are a product identification and price extraction assistant for an Argentine bakery/pastry cost management app. The user will send you a photo of a product (typically from a supermarket or store). You must:
+1. Identify what product is shown in the image (read the label, brand, product name).
+2. Match it to the closest ingredient from this list: [${ingredientList}]. Use fuzzy matching - for example "Manteca La Serenísima" should match "Manteca", "Azúcar Ledesma" should match "Azúcar", etc.
+3. Extract the price and quantity/weight from the image.
+
+Return the data using the extract_price_data function. If you cannot identify the product or match it to any ingredient, set matched_ingredient to null. The price should be in ARS (Argentine pesos). Convert kg to gr (multiply by 1000) and lt to ml (multiply by 1000) for the cantidad field.`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Extract the price and quantity for: "${ingredientName}". Look at the product image and find the price in ARS and the weight/quantity.`
+                text: `Look at this product image. Identify the product, match it to one of the ingredients in the list, and extract the price and quantity.`
               },
               {
                 type: "image_url",
@@ -45,15 +52,17 @@ serve(async (req) => {
             type: "function",
             function: {
               name: "extract_price_data",
-              description: "Extract price and quantity data from a product image",
+              description: "Extract product identification, price and quantity data from a product image",
               parameters: {
                 type: "object",
                 properties: {
+                  matched_ingredient: { type: "string", description: "The exact name from the ingredient list that best matches the product in the image, or null if no match", nullable: true },
+                  detected_product: { type: "string", description: "The product name/brand as read from the image label" },
                   precio: { type: "number", description: "Price in ARS" },
                   cantidad: { type: "number", description: "Quantity in base units (gr, ml, or unidad)" },
                   unidad: { type: "string", enum: ["gr", "ml", "unidad"], description: "Unit of measurement" }
                 },
-                required: ["precio", "cantidad", "unidad"],
+                required: ["matched_ingredient", "detected_product", "precio", "cantidad", "unidad"],
                 additionalProperties: false
               }
             }

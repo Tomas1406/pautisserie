@@ -19,7 +19,6 @@ const Ingredientes = () => {
   const [unidad, setUnidad] = useState("gr");
   const [cargandoIA, setCargandoIA] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imageTarget, setImageTarget] = useState<string | null>(null);
 
   const filtrados = ingredientes.filter(i =>
     i.nombre.toLowerCase().includes(busqueda.toLowerCase())
