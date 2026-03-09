@@ -51,17 +51,18 @@ const Login = () => {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
     });
     setLoading(false);
 
     if (error) {
       setError(error.message);
+    } else if (data.session) {
+      navigate("/");
     } else {
-      setSuccess("Te enviamos un email de verificación. Revisá tu bandeja de entrada para confirmar tu cuenta.");
+      setSuccess("Cuenta creada exitosamente. Ya podés iniciar sesión.");
     }
   };
 
@@ -82,29 +83,10 @@ const Login = () => {
           <div className="space-y-4">
             <p className="text-sm text-primary font-body bg-primary/10 rounded-xl px-4 py-3">{success}</p>
             <button
-              type="button"
-              disabled={loading}
-              onClick={async () => {
-                setLoading(true);
-                setError("");
-                const { error } = await supabase.auth.resend({ type: "signup", email });
-                setLoading(false);
-                if (error) {
-                  setError(error.message);
-                } else {
-                  setSuccess("Email de verificación reenviado. Revisá tu bandeja de entrada.");
-                }
-              }}
-              className="w-full py-3 rounded-xl bg-secondary text-secondary-foreground font-body font-semibold text-sm transition-opacity disabled:opacity-50"
-            >
-              {loading ? "Enviando..." : "¿No te llegó? Reenviar email"}
-            </button>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <button
               onClick={() => { setMode("login"); setSuccess(""); setError(""); setPassword(""); setConfirmPassword(""); }}
-              className="text-sm text-muted-foreground underline"
+              className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-body font-semibold text-sm transition-opacity"
             >
-              Ir a iniciar sesión
+              Iniciar sesión
             </button>
           </div>
         ) : mode === "login" ? (
