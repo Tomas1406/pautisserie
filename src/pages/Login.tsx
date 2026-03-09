@@ -3,51 +3,65 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.jpeg";
 
+const ALLOWED_EMAILS = ["tomas.moschen@gmail.com", "paulibrach15@outlook.com"];
+
 const Login = () => {
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"email" | "otp">("email");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    
-    const allowedEmails = ["tomas.moschen@gmail.com", "paulibrach15@outlook.com"];
-    if (!allowedEmails.includes(email.toLowerCase())) {
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+
+    if (error) {
+      setError("Email o contraseña incorrectos.");
+    } else {
+      navigate("/");
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!ALLOWED_EMAILS.includes(email.toLowerCase())) {
       setError("Este email no tiene acceso a la aplicación.");
       return;
     }
 
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: window.location.origin },
+    });
     setLoading(false);
-    
+
     if (error) {
       setError(error.message);
     } else {
-      setStep("otp");
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: "email",
-    });
-    setLoading(false);
-    
-    if (error) {
-      setError("Código inválido. Intentá de nuevo.");
-    } else {
-      navigate("/");
+      setSuccess("Te enviamos un email de verificación. Revisá tu bandeja de entrada para confirmar tu cuenta.");
     }
   };
 
@@ -61,16 +75,34 @@ const Login = () => {
         <img src={logo} alt="Pautisserie" className="w-48 mx-auto mb-8" />
         <h1 className="font-display text-2xl font-semibold text-foreground mb-1">Gestión de Costos</h1>
         <p className="text-sm text-muted-foreground font-body mb-8">
-          {step === "email" ? "Ingresá tu email para acceder" : "Ingresá el código que recibiste"}
+          {mode === "login" ? "Iniciá sesión para acceder" : "Creá tu cuenta"}
         </p>
 
-        {step === "email" ? (
-          <form onSubmit={handleSendOtp} className="space-y-4">
+        {success ? (
+          <div className="space-y-4">
+            <p className="text-sm text-primary font-body bg-primary/10 rounded-xl px-4 py-3">{success}</p>
+            <button
+              onClick={() => { setMode("login"); setSuccess(""); setError(""); setPassword(""); setConfirmPassword(""); }}
+              className="text-sm text-muted-foreground underline"
+            >
+              Ir a iniciar sesión
+            </button>
+          </div>
+        ) : mode === "login" ? (
+          <form onSubmit={handleLogin} className="space-y-4">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@email.com"
+              required
+              className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Contraseña"
               required
               className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
@@ -80,19 +112,42 @@ const Login = () => {
               disabled={loading}
               className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-body font-semibold text-sm transition-opacity disabled:opacity-50"
             >
-              {loading ? "Enviando..." : "Enviar código"}
+              {loading ? "Ingresando..." : "Iniciar sesión"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode("signup"); setError(""); setPassword(""); }}
+              className="text-sm text-muted-foreground underline"
+            >
+              ¿No tenés cuenta? Registrate
             </button>
           </form>
         ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <form onSubmit={handleSignup} className="space-y-4">
             <input
-              type="text"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              placeholder="Código de 6 dígitos"
-              maxLength={6}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@email.com"
               required
-              className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground text-sm font-body text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Contraseña (mín. 6 caracteres)"
+              required
+              minLength={6}
+              className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirmar contraseña"
+              required
+              className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <button
@@ -100,14 +155,14 @@ const Login = () => {
               disabled={loading}
               className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-body font-semibold text-sm transition-opacity disabled:opacity-50"
             >
-              {loading ? "Verificando..." : "Verificar"}
+              {loading ? "Registrando..." : "Crear cuenta"}
             </button>
             <button
               type="button"
-              onClick={() => { setStep("email"); setOtp(""); setError(""); }}
+              onClick={() => { setMode("login"); setError(""); setPassword(""); setConfirmPassword(""); }}
               className="text-sm text-muted-foreground underline"
             >
-              Cambiar email
+              ¿Ya tenés cuenta? Iniciá sesión
             </button>
           </form>
         )}
