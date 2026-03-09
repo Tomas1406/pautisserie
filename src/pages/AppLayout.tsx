@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Dashboard from "@/pages/Dashboard";
 import Ingredientes from "@/pages/Ingredientes";
+import { IngredientesProvider } from "@/context/IngredientesContext";
 import logo from "@/assets/logo.jpeg";
 import { LayoutDashboard, ShoppingBasket, LogOut } from "lucide-react";
 
@@ -36,10 +37,12 @@ const AppLayout = () => {
       </header>
 
       {/* Content */}
-      <main className="flex-1 px-4 py-4 pb-24">
-        {activeTab === "productos" && <Dashboard />}
-        {activeTab === "ingredientes" && <Ingredientes />}
-      </main>
+      <IngredientesProvider>
+        <main className="flex-1 px-4 py-4 pb-24">
+          {activeTab === "productos" && <Dashboard />}
+          {activeTab === "ingredientes" && <Ingredientes />}
+        </main>
+      </IngredientesProvider>
 
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border px-4 pb-6 pt-2 z-50">

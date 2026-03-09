@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { productosBase, formatCurrency, type Producto } from "@/data/productos";
+import { formatCurrency, type Producto } from "@/data/productos";
+import { useIngredientes } from "@/context/IngredientesContext";
 import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp } from "lucide-react";
 
 const categorias = ["Todas", "Pastafrolas", "Tartas", "Tortas", "Individuales"];
 
 const Dashboard = () => {
+  const { productos } = useIngredientes();
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
   const [productoExpandido, setProductoExpandido] = useState<string | null>(null);
 
   const productosFiltrados = categoriaActiva === "Todas"
-    ? productosBase
-    : productosBase.filter(p => p.categoria === categoriaActiva);
+    ? productos
+    : productos.filter(p => p.categoria === categoriaActiva);
 
   const costoPromedio = productosFiltrados.reduce((acc, p) => acc + p.costoTotal, 0) / productosFiltrados.length;
   const productoMasCaro = productosFiltrados.reduce((a, b) => a.costoTotal > b.costoTotal ? a : b);
@@ -80,7 +82,6 @@ const ProductoCard = ({ producto, expandido, onToggle }: { producto: Producto; e
 
     {expandido && (
       <div className="px-4 pb-4 space-y-3">
-        {/* Ingredientes */}
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ingredientes</p>
           <div className="space-y-1">
@@ -97,7 +98,6 @@ const ProductoCard = ({ producto, expandido, onToggle }: { producto: Producto; e
           </div>
         </div>
 
-        {/* Porciones y precios */}
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Precios y Márgenes</p>
           {producto.porciones.map((por, i) => (
