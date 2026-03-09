@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { useIngredientes } from "@/context/IngredientesContext";
 import { formatCurrency, type Producto } from "@/data/productos";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const CATEGORIAS = ["Pastafrolas", "Tartas", "Tortas", "Individuales"];
@@ -26,12 +26,12 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   const [lineas, setLineas] = useState<IngredienteLinea[]>([{ ingredienteId: "", cantidad: "" }]);
   const [unidades, setUnidades] = useState("1");
   const [precioVenta, setPrecioVenta] = useState("");
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (open && productoEditar) {
       setNombre(productoEditar.nombre);
       setCategoria(productoEditar.categoria);
-      // Reverse-engineer unidades from porciones
       const costoUnidad = productoEditar.porciones[0]?.costo || 0;
       const unidadesCalc = costoUnidad > 0 ? Math.round(productoEditar.costoTotal / costoUnidad) : 1;
       setUnidades(unidadesCalc.toString());
@@ -55,7 +55,6 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     setLineas(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: val } : l));
   };
 
-  // Compute live cost
   const costoTotal = lineas.reduce((acc, l) => {
     const ing = ingredientes.find(i => i.id === l.ingredienteId);
     if (!ing) return acc;
@@ -69,7 +68,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   const precioNum = parseFloat(precioVenta) || 0;
   const margen = costoUnidad > 0 ? ((precioNum - costoUnidad) / costoUnidad) * 100 : 0;
 
-  const guardar = () => {
+  const guardar = async () => {
     if (!nombre.trim()) { toast.error("Ingresá un nombre"); return; }
     const ingredientesValidos = lineas
       .filter(l => l.ingredienteId && parseFloat(l.cantidad) > 0)
@@ -85,14 +84,21 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
       precioVenta: precioNum,
     };
 
-    if (productoEditar) {
-      actualizarProducto(productoEditar.id, data);
-      toast.success("Producto actualizado");
-    } else {
-      agregarProducto(data);
-      toast.success("Producto creado");
+    setGuardando(true);
+    try {
+      if (productoEditar) {
+        await actualizarProducto(productoEditar.id, data);
+        toast.success("Producto guardado");
+      } else {
+        await agregarProducto(data);
+        toast.success("Producto guardado");
+      }
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error(err.message || "Error al guardar");
+    } finally {
+      setGuardando(false);
     }
-    onOpenChange(false);
   };
 
   return (
@@ -102,7 +108,6 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
           <DialogTitle>{productoEditar ? "Editar Producto" : "Nuevo Producto"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Nombre */}
           <div>
             <label className="text-sm font-medium text-foreground mb-1 block">Nombre</label>
             <input
@@ -113,7 +118,6 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
             />
           </div>
 
-          {/* Categoría */}
           <div>
             <label className="text-sm font-medium text-foreground mb-1 block">Categoría</label>
             <select
@@ -125,7 +129,6 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
             </select>
           </div>
 
-          {/* Ingredientes */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-foreground">Ingredientes</label>
@@ -173,7 +176,6 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
             </div>
           </div>
 
-          {/* Unidades por receta */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">Unidades por receta</label>
@@ -197,7 +199,6 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
             </div>
           </div>
 
-          {/* Live preview */}
           {costoTotal > 0 && (
             <div className="bg-secondary/50 rounded-lg p-3 space-y-1">
               <div className="flex justify-between text-sm">
@@ -221,8 +222,8 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={guardar}>
-            <Check className="w-4 h-4 mr-1" />
+          <Button onClick={guardar} disabled={guardando}>
+            {guardando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
             {productoEditar ? "Guardar" : "Crear"}
           </Button>
         </DialogFooter>

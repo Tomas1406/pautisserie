@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { formatCurrency } from "@/data/productos";
 import { useIngredientes } from "@/context/IngredientesContext";
-import { Search, Plus, Pencil, Camera, Loader2, X, Check } from "lucide-react";
+import { Search, Plus, Pencil, Camera, Loader2, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 const UNIDADES = ["gr", "ml", "unidad", "kg", "lt"];
 
 const Ingredientes = () => {
-  const { ingredientes, actualizarIngrediente, agregarIngrediente } = useIngredientes();
+  const { ingredientes, loading, actualizarIngrediente, agregarIngrediente } = useIngredientes();
   const [busqueda, setBusqueda] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -18,6 +18,7 @@ const Ingredientes = () => {
   const [cantidad, setCantidad] = useState("");
   const [unidad, setUnidad] = useState("gr");
   const [cargandoIA, setCargandoIA] = useState(false);
+  const [guardando, setGuardando] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtrados = ingredientes.filter(i =>
@@ -44,21 +45,28 @@ const Ingredientes = () => {
     setDialogOpen(true);
   };
 
-  const guardar = () => {
+  const guardar = async () => {
     const p = parseFloat(precio);
     const c = parseFloat(cantidad);
     if (!nombre.trim() || isNaN(p) || isNaN(c) || c <= 0) {
       toast.error("Completá todos los campos correctamente");
       return;
     }
-    if (editId) {
-      actualizarIngrediente(editId, p, c);
-      toast.success("Ingrediente actualizado. Costos de productos recalculados.");
-    } else {
-      agregarIngrediente({ nombre: nombre.trim(), precio: p, cantidad: c, unidad });
-      toast.success("Ingrediente agregado");
+    setGuardando(true);
+    try {
+      if (editId) {
+        await actualizarIngrediente(editId, p, c);
+        toast.success("Ingrediente actualizado. Costos de productos recalculados.");
+      } else {
+        await agregarIngrediente({ nombre: nombre.trim(), precio: p, cantidad: c, unidad });
+        toast.success("Ingrediente guardado");
+      }
+      setDialogOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Error al guardar");
+    } finally {
+      setGuardando(false);
     }
-    setDialogOpen(false);
   };
 
   const handleScanClick = () => {
@@ -105,7 +113,7 @@ const Ingredientes = () => {
           i => i.nombre.toLowerCase() === data.matched_ingredient.toLowerCase()
         );
         if (matched) {
-          actualizarIngrediente(matched.id, data.precio, data.cantidad);
+          await actualizarIngrediente(matched.id, data.precio, data.cantidad);
           toast.success(
             `"${data.detected_product}" → ${matched.nombre} actualizado: ${formatCurrency(data.precio)} por ${data.cantidad} ${data.unidad || matched.unidad}. Costos recalculados.`
           );
@@ -127,18 +135,18 @@ const Ingredientes = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleImageUpload}
-      />
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
-      {/* Search + Add + Scan */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -158,7 +166,6 @@ const Ingredientes = () => {
         </Button>
       </div>
 
-      {/* Loading overlay */}
       {cargandoIA && (
         <div className="mb-4 flex items-center gap-2 bg-primary/10 rounded-xl px-4 py-3 text-sm text-foreground">
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -166,7 +173,6 @@ const Ingredientes = () => {
         </div>
       )}
 
-      {/* Table */}
       <div className="bg-card rounded-xl overflow-hidden">
         <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-1 px-3 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
           <span>Ingrediente</span>
@@ -195,7 +201,6 @@ const Ingredientes = () => {
         </div>
       </div>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -259,8 +264,8 @@ const Ingredientes = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={guardar}>
-              <Check className="w-4 h-4 mr-1" />
+            <Button onClick={guardar} disabled={guardando}>
+              {guardando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
               {editId ? "Guardar" : "Agregar"}
             </Button>
           </DialogFooter>
