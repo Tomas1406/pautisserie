@@ -182,19 +182,12 @@ const Ingredientes = () => {
               <span className="text-sm text-foreground font-medium text-right w-20">{formatCurrency(ing.precio)}</span>
               <span className="text-sm text-muted-foreground text-right w-14">{ing.cantidad} {ing.unidad}</span>
               <span className="text-sm text-foreground font-medium text-right w-16">{formatCurrency(ing.precioUnitario)}</span>
-              <div className="flex gap-1 w-16 justify-end">
+              <div className="flex gap-1 w-8 justify-end">
                 <button
                   onClick={() => abrirEditar(ing.id)}
                   className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
                 >
                   <Pencil className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => handleImageClick(ing.id)}
-                  disabled={cargandoIA}
-                  className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
-                >
-                  <Camera className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
