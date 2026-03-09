@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Dashboard from "@/pages/Dashboard";
 import Ingredientes from "@/pages/Ingredientes";
+import { IngredientesProvider } from "@/context/IngredientesContext";
 import logo from "@/assets/logo.jpeg";
 import { LayoutDashboard, ShoppingBasket, LogOut } from "lucide-react";
 
