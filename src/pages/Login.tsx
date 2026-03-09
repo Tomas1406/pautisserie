@@ -15,7 +15,8 @@ const Login = () => {
     e.preventDefault();
     setError("");
     
-    if (email.toLowerCase() !== "tomas.moschen@gmail.com") {
+    const allowedEmails = ["tomas.moschen@gmail.com", "paulibrach15@outlook.com"];
+    if (!allowedEmails.includes(email.toLowerCase())) {
       setError("Este email no tiene acceso a la aplicación.");
       return;
     }
