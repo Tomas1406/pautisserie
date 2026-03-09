@@ -82,6 +82,25 @@ const Login = () => {
           <div className="space-y-4">
             <p className="text-sm text-primary font-body bg-primary/10 rounded-xl px-4 py-3">{success}</p>
             <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                setError("");
+                const { error } = await supabase.auth.resend({ type: "signup", email });
+                setLoading(false);
+                if (error) {
+                  setError(error.message);
+                } else {
+                  setSuccess("Email de verificación reenviado. Revisá tu bandeja de entrada.");
+                }
+              }}
+              className="w-full py-3 rounded-xl bg-secondary text-secondary-foreground font-body font-semibold text-sm transition-opacity disabled:opacity-50"
+            >
+              {loading ? "Enviando..." : "¿No te llegó? Reenviar email"}
+            </button>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <button
               onClick={() => { setMode("login"); setSuccess(""); setError(""); setPassword(""); setConfirmPassword(""); }}
               className="text-sm text-muted-foreground underline"
             >
