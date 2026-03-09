@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formatCurrency, type Producto } from "@/data/productos";
 import { useIngredientes } from "@/context/IngredientesContext";
-import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductoDialog from "@/components/ProductoDialog";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import { toast } from "sonner";
 const categorias = ["Todas", "Pastafrolas", "Tartas", "Tortas", "Individuales"];
 
 const Dashboard = () => {
-  const { productos, eliminarProducto } = useIngredientes();
+  const { productos, loading, eliminarProducto } = useIngredientes();
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
   const [productoExpandido, setProductoExpandido] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -36,12 +36,20 @@ const Dashboard = () => {
     setDialogOpen(true);
   };
 
-  const confirmarEliminar = (producto: Producto) => {
+  const confirmarEliminar = async (producto: Producto) => {
     if (window.confirm(`¿Eliminar "${producto.nombre}"?`)) {
-      eliminarProducto(producto.id);
+      await eliminarProducto(producto.id);
       toast.success("Producto eliminado");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

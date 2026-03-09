@@ -14,7 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ingredientes: {
+        Row: {
+          cantidad: number
+          created_at: string
+          id: string
+          nombre: string
+          precio: number
+          precio_unitario: number
+          unidad: string
+          updated_at: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          id: string
+          nombre: string
+          precio?: number
+          precio_unitario?: number
+          unidad?: string
+          updated_at?: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          id?: string
+          nombre?: string
+          precio?: number
+          precio_unitario?: number
+          unidad?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      productos: {
+        Row: {
+          categoria: string
+          costo_total: number
+          created_at: string
+          id: string
+          ingredientes: Json
+          nombre: string
+          porciones: Json
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string
+          costo_total?: number
+          created_at?: string
+          id: string
+          ingredientes?: Json
+          nombre: string
+          porciones?: Json
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string
+          costo_total?: number
+          created_at?: string
+          id?: string
+          ingredientes?: Json
+          nombre?: string
+          porciones?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
