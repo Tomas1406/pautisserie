@@ -1,11 +1,22 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { ingredientesBase, productosBase, type Ingrediente, type Producto } from "@/data/productos";
 
+interface NuevoProducto {
+  nombre: string;
+  categoria: string;
+  ingredientes: { ingredienteId: string; cantidad: number }[];
+  unidadesPorReceta: number;
+  precioVenta: number;
+}
+
 interface IngredientesContextType {
   ingredientes: Ingrediente[];
   productos: Producto[];
   agregarIngrediente: (ing: Omit<Ingrediente, "id" | "precioUnitario">) => void;
   actualizarIngrediente: (id: string, precio: number, cantidad: number) => void;
+  agregarProducto: (prod: NuevoProducto) => void;
+  actualizarProducto: (id: string, prod: NuevoProducto) => void;
+  eliminarProducto: (id: string) => void;
 }
 
 const IngredientesContext = createContext<IngredientesContextType | null>(null);
