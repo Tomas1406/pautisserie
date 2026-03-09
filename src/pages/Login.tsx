@@ -51,17 +51,18 @@ const Login = () => {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
     });
     setLoading(false);
 
     if (error) {
       setError(error.message);
+    } else if (data.session) {
+      navigate("/");
     } else {
-      setSuccess("Te enviamos un email de verificación. Revisá tu bandeja de entrada para confirmar tu cuenta.");
+      setSuccess("Cuenta creada exitosamente. Ya podés iniciar sesión.");
     }
   };
 
