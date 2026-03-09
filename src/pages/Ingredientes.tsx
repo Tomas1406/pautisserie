@@ -173,7 +173,7 @@ const Ingredientes = () => {
           <span className="text-right">Precio</span>
           <span className="text-right">Cant.</span>
           <span className="text-right">$/u</span>
-          <span className="w-16"></span>
+          <span className="w-8"></span>
         </div>
         <div className="divide-y divide-border">
           {filtrados.map(ing => (
