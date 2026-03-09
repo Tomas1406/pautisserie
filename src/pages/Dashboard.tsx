@@ -9,7 +9,7 @@ import { toast } from "sonner";
 const categorias = ["Todas", "Pastafrolas", "Tartas", "Tortas", "Individuales"];
 
 const Dashboard = () => {
-  const { productos, eliminarProducto } = useIngredientes();
+  const { productos, loading, eliminarProducto } = useIngredientes();
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
   const [productoExpandido, setProductoExpandido] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
