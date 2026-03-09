@@ -1,22 +1,47 @@
 import { useState } from "react";
 import { formatCurrency, type Producto } from "@/data/productos";
 import { useIngredientes } from "@/context/IngredientesContext";
-import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import ProductoDialog from "@/components/ProductoDialog";
+import { toast } from "sonner";
 
 const categorias = ["Todas", "Pastafrolas", "Tartas", "Tortas", "Individuales"];
 
 const Dashboard = () => {
-  const { productos } = useIngredientes();
+  const { productos, eliminarProducto } = useIngredientes();
   const [categoriaActiva, setCategoriaActiva] = useState("Todas");
   const [productoExpandido, setProductoExpandido] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [productoEditar, setProductoEditar] = useState<Producto | null>(null);
 
   const productosFiltrados = categoriaActiva === "Todas"
     ? productos
     : productos.filter(p => p.categoria === categoriaActiva);
 
-  const costoPromedio = productosFiltrados.reduce((acc, p) => acc + p.costoTotal, 0) / productosFiltrados.length;
-  const productoMasCaro = productosFiltrados.reduce((a, b) => a.costoTotal > b.costoTotal ? a : b);
-  const margenPromedio = productosFiltrados.flatMap(p => p.porciones).reduce((acc, por) => acc + por.margen, 0) / productosFiltrados.flatMap(p => p.porciones).length;
+  const costoPromedio = productosFiltrados.length > 0
+    ? productosFiltrados.reduce((acc, p) => acc + p.costoTotal, 0) / productosFiltrados.length
+    : 0;
+  const margenPromedio = productosFiltrados.flatMap(p => p.porciones).length > 0
+    ? productosFiltrados.flatMap(p => p.porciones).reduce((acc, por) => acc + por.margen, 0) / productosFiltrados.flatMap(p => p.porciones).length
+    : 0;
+
+  const abrirCrear = () => {
+    setProductoEditar(null);
+    setDialogOpen(true);
+  };
+
+  const abrirEditar = (producto: Producto) => {
+    setProductoEditar(producto);
+    setDialogOpen(true);
+  };
+
+  const confirmarEliminar = (producto: Producto) => {
+    if (window.confirm(`¿Eliminar "${producto.nombre}"?`)) {
+      eliminarProducto(producto.id);
+      toast.success("Producto eliminado");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,21 +52,26 @@ const Dashboard = () => {
         <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Margen Prom." value={`${Math.round(margenPromedio)}%`} />
       </div>
 
-      {/* Category Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
-        {categorias.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setCategoriaActiva(cat)}
-            className={`px-4 py-2 rounded-full text-sm font-body whitespace-nowrap transition-all ${
-              categoriaActiva === cat
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+      {/* Category Filter + Add */}
+      <div className="flex gap-2 mb-4 items-center">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
+          {categorias.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setCategoriaActiva(cat)}
+              className={`px-4 py-2 rounded-full text-sm font-body whitespace-nowrap transition-all ${
+                categoriaActiva === cat
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        <Button onClick={abrirCrear} size="icon" className="rounded-xl h-[38px] w-[38px] shrink-0">
+          <Plus className="w-5 h-5" />
+        </Button>
       </div>
 
       {/* Product List */}
@@ -52,9 +82,13 @@ const Dashboard = () => {
             producto={producto}
             expandido={productoExpandido === producto.id}
             onToggle={() => setProductoExpandido(productoExpandido === producto.id ? null : producto.id)}
+            onEditar={() => abrirEditar(producto)}
+            onEliminar={() => confirmarEliminar(producto)}
           />
         ))}
       </div>
+
+      <ProductoDialog open={dialogOpen} onOpenChange={setDialogOpen} productoEditar={productoEditar} />
     </div>
   );
 };
@@ -67,7 +101,9 @@ const StatCard = ({ icon, label, value }: { icon: React.ReactNode; label: string
   </div>
 );
 
-const ProductoCard = ({ producto, expandido, onToggle }: { producto: Producto; expandido: boolean; onToggle: () => void }) => (
+const ProductoCard = ({ producto, expandido, onToggle, onEditar, onEliminar }: {
+  producto: Producto; expandido: boolean; onToggle: () => void; onEditar: () => void; onEliminar: () => void;
+}) => (
   <div className="bg-card rounded-xl overflow-hidden transition-all">
     <button onClick={onToggle} className="w-full p-4 flex items-center justify-between text-left">
       <div className="flex-1">
@@ -116,6 +152,16 @@ const ProductoCard = ({ producto, expandido, onToggle }: { producto: Producto; e
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Edit / Delete actions */}
+        <div className="flex gap-2 pt-2 border-t border-border">
+          <Button size="sm" variant="outline" onClick={onEditar} className="flex-1">
+            <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
+          </Button>
+          <Button size="sm" variant="outline" onClick={onEliminar} className="text-destructive hover:text-destructive">
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
     )}
