@@ -8,6 +8,7 @@ interface NuevoProducto {
   ingredientes: { ingredienteId: string; cantidad: number }[];
   unidadesPorReceta: number;
   precioVenta: number;
+  imagenUrl?: string;
 }
 
 interface IngredientesContextType {
@@ -20,6 +21,7 @@ interface IngredientesContextType {
   agregarProducto: (prod: NuevoProducto) => Promise<void>;
   actualizarProducto: (id: string, prod: NuevoProducto) => Promise<void>;
   eliminarProducto: (id: string) => Promise<void>;
+  subirImagenProducto: (productoId: string, file: File) => Promise<string>;
 }
 
 const IngredientesContext = createContext<IngredientesContextType | null>(null);
@@ -35,7 +37,6 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       const [ingRes, prodRes] = await Promise.all([
@@ -62,6 +63,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
           ingredientes: r.ingredientes as any[],
           costoTotal: Number(r.costo_total),
           porciones: r.porciones as any[],
+          imagenUrl: r.imagen_url || undefined,
         })));
       }
 
@@ -70,7 +72,6 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
 
     fetchData();
 
-    // Realtime subscriptions
     const ingChannel = supabase
       .channel("ingredientes-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "ingredientes" }, () => {
@@ -97,7 +98,6 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
       precio, cantidad, precio_unitario: precioUnitario, updated_at: new Date().toISOString(),
     }).eq("id", id);
 
-    // Recalculate affected products
     const { data: allProducts } = await supabase.from("productos").select("*");
     const { data: allIngs } = await supabase.from("ingredientes").select("*");
     if (!allProducts || !allIngs) return;
@@ -140,6 +140,30 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
     await supabase.from("ingredientes").delete().eq("id", id);
   }, []);
 
+  const subirImagenProducto = useCallback(async (productoId: string, file: File): Promise<string> => {
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${productoId}.${ext}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(path, file, { upsert: true });
+    
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from("product-images")
+      .getPublicUrl(path);
+
+    const imagenUrl = urlData.publicUrl;
+
+    await supabase.from("productos").update({
+      imagen_url: imagenUrl,
+      updated_at: new Date().toISOString(),
+    }).eq("id", productoId);
+
+    return imagenUrl;
+  }, []);
+
   const agregarProducto = useCallback(async (data: NuevoProducto) => {
     const id = data.nombre.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
     const { data: allIngs } = await supabase.from("ingredientes").select("*");
@@ -159,6 +183,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
       id, nombre: data.nombre, categoria: data.categoria,
       ingredientes: ingredientesReceta, costo_total: costoTotal,
       porciones: [{ nombre: "Unidad", costo: costoUnidad, precio: data.precioVenta, margen }],
+      imagen_url: data.imagenUrl || null,
     });
   }, []);
 
@@ -180,6 +205,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
       nombre: data.nombre, categoria: data.categoria,
       ingredientes: ingredientesReceta, costo_total: costoTotal,
       porciones: [{ nombre: "Unidad", costo: costoUnidad, precio: data.precioVenta, margen }],
+      imagen_url: data.imagenUrl || null,
       updated_at: new Date().toISOString(),
     }).eq("id", id);
   }, []);
@@ -189,7 +215,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <IngredientesContext.Provider value={{ ingredientes, productos, loading, agregarIngrediente, actualizarIngrediente, eliminarIngrediente, agregarProducto, actualizarProducto, eliminarProducto }}>
+    <IngredientesContext.Provider value={{ ingredientes, productos, loading, agregarIngrediente, actualizarIngrediente, eliminarIngrediente, agregarProducto, actualizarProducto, eliminarProducto, subirImagenProducto }}>
       {children}
     </IngredientesContext.Provider>
   );

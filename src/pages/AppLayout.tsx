@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Dashboard from "@/pages/Dashboard";
 import Ingredientes from "@/pages/Ingredientes";
 import { IngredientesProvider } from "@/context/IngredientesContext";
-import logo from "@/assets/logo.jpeg";
+import logo from "@/assets/logo-pautisserie.jpeg";
 import { LayoutDashboard, ShoppingBasket, LogOut } from "lucide-react";
 
 const tabs = [
@@ -25,18 +25,16 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Pautisserie" className="w-8 h-8 rounded-full object-cover" />
-          <span className="font-display text-lg font-semibold text-foreground">Pautisserie</span>
+          <img src={logo} alt="Pautisserie" className="w-8 h-8 rounded-lg object-cover" />
+          <span className="font-display text-lg font-semibold text-foreground tracking-wide">PAUTISSERIE</span>
         </div>
         <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
           <LogOut className="w-5 h-5" />
         </button>
       </header>
 
-      {/* Content */}
       <IngredientesProvider>
         <main className="flex-1 px-4 py-4 pb-24">
           {activeTab === "productos" && <Dashboard />}
@@ -44,7 +42,6 @@ const AppLayout = () => {
         </main>
       </IngredientesProvider>
 
-      {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-md border-t border-border px-4 pb-6 pt-2 z-50">
         <div className="flex justify-around max-w-md mx-auto">
           {tabs.map(tab => {
