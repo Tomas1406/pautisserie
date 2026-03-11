@@ -53,6 +53,7 @@ export type Database = {
           costo_total: number
           created_at: string
           id: string
+          imagen_url: string | null
           ingredientes: Json
           nombre: string
           porciones: Json
@@ -63,6 +64,7 @@ export type Database = {
           costo_total?: number
           created_at?: string
           id: string
+          imagen_url?: string | null
           ingredientes?: Json
           nombre: string
           porciones?: Json
@@ -73,6 +75,7 @@ export type Database = {
           costo_total?: number
           created_at?: string
           id?: string
+          imagen_url?: string | null
           ingredientes?: Json
           nombre?: string
           porciones?: Json
