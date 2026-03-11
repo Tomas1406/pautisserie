@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/logo.jpeg";
+import logo from "@/assets/logo-pautisserie.jpeg";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -15,7 +15,6 @@ const Login = () => {
     setError("");
     setLoading(true);
 
-    // Map username to the internal email
     const email = `${username.toLowerCase()}@app.local`;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
@@ -33,7 +32,7 @@ const Login = () => {
       <div className="fixed bottom-[-8rem] left-[-4rem] w-80 h-80 bg-secondary/60 brand-blob opacity-40" />
 
       <div className="relative z-10 w-full max-w-sm text-center">
-        <img src={logo} alt="Pautisserie" className="w-48 mx-auto mb-8" />
+        <img src={logo} alt="Pautisserie" className="w-48 mx-auto mb-8 rounded-2xl shadow-lg" />
         <h1 className="font-display text-2xl font-semibold text-foreground mb-1">Gestión de Costos</h1>
         <p className="text-sm text-muted-foreground font-body mb-8">Iniciá sesión para acceder</p>
 
