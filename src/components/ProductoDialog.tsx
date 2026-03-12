@@ -13,6 +13,11 @@ interface IngredienteLinea {
   cantidad: string;
 }
 
+interface PorcionLinea {
+  unidadOutput: string;
+  precio: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -24,27 +29,29 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   const [nombre, setNombre] = useState("");
   const [categoria, setCategoria] = useState(CATEGORIAS[0]);
   const [lineas, setLineas] = useState<IngredienteLinea[]>([{ ingredienteId: "", cantidad: "" }]);
-  const [unidadOutput, setUnidadOutput] = useState("1_unidad");
-  const [precioVenta, setPrecioVenta] = useState("");
+  const [unidadesPorReceta, setUnidadesPorReceta] = useState("1");
+  const [porcionesLineas, setPorcionesLineas] = useState<PorcionLinea[]>([{ unidadOutput: "1_unidad", precio: "" }]);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (open && productoEditar) {
       setNombre(productoEditar.nombre);
       setCategoria(productoEditar.categoria);
-      const porcion = productoEditar.porciones[0];
-      setUnidadOutput(porcion?.unidadOutput || "1_unidad");
-      setPrecioVenta((porcion?.precio || 0).toString());
+      setUnidadesPorReceta(productoEditar.unidadesPorReceta.toString());
       setLineas(productoEditar.ingredientes.map(ri => ({
         ingredienteId: ri.ingredienteId,
         cantidad: ri.cantidad.toString(),
+      })));
+      setPorcionesLineas(productoEditar.porciones.map(p => ({
+        unidadOutput: p.unidadOutput,
+        precio: p.precio.toString(),
       })));
     } else if (open) {
       setNombre("");
       setCategoria(CATEGORIAS[0]);
       setLineas([{ ingredienteId: "", cantidad: "" }]);
-      setUnidadOutput("1_unidad");
-      setPrecioVenta("");
+      setUnidadesPorReceta("1");
+      setPorcionesLineas([{ unidadOutput: "1_unidad", precio: "" }]);
     }
   }, [open, productoEditar]);
 
@@ -54,6 +61,9 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     setLineas(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: val } : l));
   };
 
+  const addPorcion = () => setPorcionesLineas(prev => [...prev, { unidadOutput: "1_unidad", precio: "" }]);
+  const removePorcion = (i: number) => setPorcionesLineas(prev => prev.filter((_, idx) => idx !== i));
+
   const costoTotal = lineas.reduce((acc, l) => {
     const ing = ingredientes.find(i => i.id === l.ingredienteId);
     if (!ing) return acc;
@@ -62,10 +72,8 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     return acc + ing.precioUnitario * cant;
   }, 0);
 
-  const outputUnit = getOutputUnit(unidadOutput);
-  const costoOutput = outputUnit.factor > 0 ? costoTotal / outputUnit.factor : costoTotal;
-  const precioNum = parseFloat(precioVenta) || 0;
-  const margen = costoOutput > 0 ? ((precioNum - costoOutput) / costoOutput) * 100 : 0;
+  const upr = parseFloat(unidadesPorReceta.replace(",", ".")) || 1;
+  const costoPerUnit = upr > 0 ? costoTotal / upr : costoTotal;
 
   const guardar = async () => {
     if (!nombre.trim()) { toast.error("Ingresá un nombre"); return; }
@@ -73,18 +81,20 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
       .filter(l => l.ingredienteId && parseFloat(l.cantidad) > 0)
       .map(l => ({ ingredienteId: l.ingredienteId, cantidad: parseFloat(l.cantidad) }));
     if (ingredientesValidos.length === 0) { toast.error("Agregá al menos un ingrediente"); return; }
-    if (precioNum <= 0) { toast.error("Ingresá un precio de venta"); return; }
+
+    const porcionesValidas = porcionesLineas
+      .filter(p => parseFloat(p.precio) > 0)
+      .map(p => ({ unidadOutput: p.unidadOutput, precio: parseFloat(p.precio) }));
+    if (porcionesValidas.length === 0) { toast.error("Agregá al menos un formato de venta con precio"); return; }
 
     const data: any = {
       nombre: nombre.trim(),
       categoria,
       ingredientes: ingredientesValidos,
-      unidadesPorReceta: outputUnit.factor,
-      precioVenta: precioNum,
-      unidadOutput: unidadOutput,
+      unidadesPorReceta: upr,
+      porciones: porcionesValidas,
     };
 
-    // When editing, preserve the existing image
     if (productoEditar) {
       data.imagenUrl = productoEditar.imagenUrl;
     }
@@ -96,7 +106,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
         toast.success("Producto guardado");
       } else {
         await agregarProducto(data);
-        toast.success("Producto guardado");
+        toast.success("Producto creado");
       }
       onOpenChange(false);
     } catch (err: any) {
@@ -115,25 +125,20 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground mb-1 block">Nombre</label>
-            <input
-              value={nombre}
-              onChange={e => setNombre(e.target.value)}
+            <input value={nombre} onChange={e => setNombre(e.target.value)}
               placeholder="Ej: Torta de Chocolate"
-              className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
+              className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
 
           <div>
             <label className="text-sm font-medium text-foreground mb-1 block">Categoría</label>
-            <select
-              value={categoria}
-              onChange={e => setCategoria(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
+            <select value={categoria} onChange={e => setCategoria(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30">
               {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 
+          {/* Ingredientes */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-foreground">Ingredientes</label>
@@ -146,29 +151,16 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
                 const ing = ingredientes.find(x => x.id === linea.ingredienteId);
                 return (
                   <div key={i} className="flex gap-2 items-center">
-                    <select
-                      value={linea.ingredienteId}
-                      onChange={e => updateLinea(i, "ingredienteId", e.target.value)}
-                      className="flex-1 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    >
+                    <select value={linea.ingredienteId} onChange={e => updateLinea(i, "ingredienteId", e.target.value)}
+                      className="flex-1 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30">
                       <option value="">Seleccionar...</option>
-                      {ingredientes.map(ig => (
-                        <option key={ig.id} value={ig.id}>{ig.nombre}</option>
-                      ))}
+                      {ingredientes.map(ig => <option key={ig.id} value={ig.id}>{ig.nombre}</option>)}
                     </select>
                     <div className="relative w-24">
-                      <input
-                        type="number"
-                        value={linea.cantidad}
-                        onChange={e => updateLinea(i, "cantidad", e.target.value)}
+                      <input type="number" value={linea.cantidad} onChange={e => updateLinea(i, "cantidad", e.target.value)}
                         placeholder="Cant."
-                        className="w-full px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
-                      />
-                      {ing && (
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          {ing.unidad}
-                        </span>
-                      )}
+                        className="w-full px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8" />
+                      {ing && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{ing.unidad}</span>}
                     </div>
                     {lineas.length > 1 && (
                       <button onClick={() => removeLinea(i)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
@@ -181,29 +173,67 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Unidad de output</label>
-              <select
-                value={unidadOutput}
-                onChange={e => setUnidadOutput(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                {OUTPUT_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-              </select>
+          {/* Rendimiento */}
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">Unidades producidas por receta</label>
+            <input value={unidadesPorReceta}
+              onChange={e => setUnidadesPorReceta(e.target.value)}
+              placeholder="Ej: 18"
+              className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+
+          {/* Formatos de venta */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-foreground">Formatos de venta</label>
+              <Button size="sm" variant="ghost" onClick={addPorcion} className="h-7 text-xs">
+                <Plus className="w-3 h-3 mr-1" /> Agregar
+              </Button>
             </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Precio venta ({outputUnit.label})</label>
-              <input
-                type="number"
-                value={precioVenta}
-                onChange={e => setPrecioVenta(e.target.value)}
-                placeholder="0"
-                className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+            <div className="space-y-2">
+              {porcionesLineas.map((pl, i) => {
+                const ou = getOutputUnit(pl.unidadOutput);
+                const costoPorcion = costoPerUnit * ou.factor;
+                const precioNum = parseFloat(pl.precio) || 0;
+                const margen = costoPorcion > 0 ? ((precioNum - costoPorcion) / costoPorcion) * 100 : 0;
+                return (
+                  <div key={i} className="space-y-1">
+                    <div className="flex gap-2 items-center">
+                      <select value={pl.unidadOutput}
+                        onChange={e => setPorcionesLineas(prev => prev.map((p, idx) => idx === i ? { ...p, unidadOutput: e.target.value } : p))}
+                        className="flex-1 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        {OUTPUT_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                      </select>
+                      <div className="relative w-28">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                        <input type="number" value={pl.precio}
+                          onChange={e => setPorcionesLineas(prev => prev.map((p, idx) => idx === i ? { ...p, precio: e.target.value } : p))}
+                          placeholder="Precio"
+                          className="w-full pl-5 pr-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      </div>
+                      {porcionesLineas.length > 1 && (
+                        <button onClick={() => removePorcion(i)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    {costoTotal > 0 && (
+                      <div className="flex gap-3 text-xs text-muted-foreground pl-1">
+                        <span>Costo: {formatCurrency(costoPorcion)}</span>
+                        {precioNum > 0 && (
+                          <span className={margen >= 200 ? "text-success" : margen >= 100 ? "text-warning" : "text-destructive"}>
+                            Margen: {Math.round(margen)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
+          {/* Summary */}
           {costoTotal > 0 && (
             <div className="bg-secondary/50 rounded-lg p-3 space-y-1">
               <div className="flex justify-between text-sm">
@@ -211,17 +241,9 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
                 <span className="font-medium text-foreground">{formatCurrency(costoTotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Costo por {outputUnit.label}</span>
-                <span className="font-medium text-foreground">{formatCurrency(costoOutput)}</span>
+                <span className="text-muted-foreground">Costo por unidad ({upr} uds)</span>
+                <span className="font-medium text-foreground">{formatCurrency(costoPerUnit)}</span>
               </div>
-              {precioNum > 0 && (
-                <div className="flex justify-between text-sm pt-1 border-t border-border">
-                  <span className="text-muted-foreground">Margen</span>
-                  <span className={`font-semibold ${margen >= 200 ? "text-success" : margen >= 100 ? "text-warning" : "text-destructive"}`}>
-                    {Math.round(margen)}%
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </div>

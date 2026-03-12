@@ -12,27 +12,36 @@ const PanelControl = () => {
     const mesActual = now.getMonth();
     const anioActual = now.getFullYear();
 
-    const pedidosCompletados = pedidos.filter(p => p.estado === "completado");
-    const pedidosMes = pedidosCompletados.filter(p => {
+    // Only count orders marked as completado
+    const pedidosConCompletados = pedidos.filter(p =>
+      p.ordenes.some(o => o.estado === "completado")
+    );
+
+    const getCompletedOrdenes = (peds: typeof pedidos) =>
+      peds.flatMap(p => p.ordenes.filter(o => o.estado === "completado"));
+
+    const ordenesCompletadas = getCompletedOrdenes(pedidos);
+    const pedidosMes = pedidos.filter(p => {
       const d = new Date(p.fechaEntrega);
       return d.getMonth() === mesActual && d.getFullYear() === anioActual;
     });
+    const ordenesCompletadasMes = getCompletedOrdenes(pedidosMes);
 
-    const ingresosTotal = pedidosCompletados.reduce((a, p) => a + p.ingresoTotal, 0);
-    const gastosTotal = pedidosCompletados.reduce((a, p) => a + p.costoTotal, 0);
+    const ingresosTotal = ordenesCompletadas.reduce((a, o) => a + o.ingresoTotal, 0);
+    const gastosTotal = ordenesCompletadas.reduce((a, o) => a + o.costoTotal, 0);
     const gananciaTotal = ingresosTotal - gastosTotal;
 
-    const ingresosMes = pedidosMes.reduce((a, p) => a + p.ingresoTotal, 0);
-    const gastosMes = pedidosMes.reduce((a, p) => a + p.costoTotal, 0);
+    const ingresosMes = ordenesCompletadasMes.reduce((a, o) => a + o.ingresoTotal, 0);
+    const gastosMes = ordenesCompletadasMes.reduce((a, o) => a + o.costoTotal, 0);
     const gananciaMes = ingresosMes - gastosMes;
 
-    const cantVendidaTotal = pedidosCompletados.reduce((a, p) => a + p.productos.reduce((b, pp) => b + pp.cantidad, 0), 0);
-    const cantVendidaMes = pedidosMes.reduce((a, p) => a + p.productos.reduce((b, pp) => b + pp.cantidad, 0), 0);
+    const cantVendidaTotal = ordenesCompletadas.reduce((a, o) => a + o.productos.reduce((b, pp) => b + pp.cantidad, 0), 0);
+    const cantVendidaMes = ordenesCompletadasMes.reduce((a, o) => a + o.productos.reduce((b, pp) => b + pp.cantidad, 0), 0);
 
     // Product analysis
     const ventasPorProducto = new Map<string, { nombre: string; cantVendida: number; ganancia: number }>();
-    pedidosCompletados.forEach(pedido => {
-      pedido.productos.forEach(pp => {
+    ordenesCompletadas.forEach(orden => {
+      orden.productos.forEach(pp => {
         const prev = ventasPorProducto.get(pp.productoId) || { nombre: pp.nombre, cantVendida: 0, ganancia: 0 };
         prev.cantVendida += pp.cantidad;
         prev.ganancia += (pp.precioUnitario - pp.costoUnitario) * pp.cantidad;
@@ -49,15 +58,16 @@ const PanelControl = () => {
       const d = new Date(anioActual, mesActual - i, 1);
       const m = d.getMonth();
       const y = d.getFullYear();
-      const pMes = pedidosCompletados.filter(p => {
+      const pMes = pedidos.filter(p => {
         const fd = new Date(p.fechaEntrega);
         return fd.getMonth() === m && fd.getFullYear() === y;
       });
+      const oMes = getCompletedOrdenes(pMes);
       meses.push({
         mes: d.toLocaleDateString("es-AR", { month: "short" }),
-        ingresos: pMes.reduce((a, p) => a + p.ingresoTotal, 0),
-        gastos: pMes.reduce((a, p) => a + p.costoTotal, 0),
-        ganancia: pMes.reduce((a, p) => a + p.ganancia, 0),
+        ingresos: oMes.reduce((a, o) => a + o.ingresoTotal, 0),
+        gastos: oMes.reduce((a, o) => a + o.costoTotal, 0),
+        ganancia: oMes.reduce((a, o) => a + o.ganancia, 0),
       });
     }
 
@@ -153,10 +163,10 @@ const PanelControl = () => {
         </div>
       )}
 
-      {pedidos.filter(p => p.estado === "completado").length === 0 && (
+      {pedidos.flatMap(p => p.ordenes).filter(o => o.estado === "completado").length === 0 && (
         <div className="text-center py-8 text-muted-foreground text-sm">
-          Las métricas se generan a partir de los pedidos completados.<br />
-          Creá pedidos y marcalos como completados para ver estadísticas.
+          Las métricas se generan a partir de las órdenes completadas.<br />
+          Creá pedidos y marcá las órdenes como completadas para ver estadísticas.
         </div>
       )}
     </div>

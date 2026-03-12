@@ -20,8 +20,8 @@ export interface Porcion {
   costo: number;
   precio: number;
   margen: number;
-  unidadOutput?: string; // e.g. "1_unidad", "1/2_docena", etc.
-  factorOutput?: number; // how many individual units this output represents
+  unidadOutput: string;
+  factorOutput: number;
 }
 
 export interface Producto {
@@ -30,18 +30,31 @@ export interface Producto {
   categoria: string;
   ingredientes: RecetaIngrediente[];
   costoTotal: number;
+  unidadesPorReceta: number;
   porciones: Porcion[];
   imagenUrl?: string;
 }
 
-export interface PedidoProducto {
+export interface OrdenProducto {
   productoId: string;
   nombre: string;
+  porcionIdx: number;
+  porcionNombre: string;
   cantidad: number;
   costoUnitario: number;
   precioUnitario: number;
-  unidadOutput?: string;
-  factorOutput?: number;
+  factorOutput: number;
+}
+
+export interface Orden {
+  id: string;
+  cliente: string;
+  estado: string;
+  pagoEstado: string;
+  productos: OrdenProducto[];
+  costoTotal: number;
+  ingresoTotal: number;
+  ganancia: number;
 }
 
 export interface PedidoIngrediente {
@@ -55,15 +68,12 @@ export interface PedidoIngrediente {
 export interface Pedido {
   id: string;
   fechaEntrega: string;
-  estado: string;
-  productos: PedidoProducto[];
+  ordenes: Orden[];
   costoTotal: number;
   ingresoTotal: number;
   ganancia: number;
   ingredientesNecesarios: PedidoIngrediente[];
   notas: string;
-  cliente: string;
-  pagoEstado: string;
   createdAt: string;
 }
 
