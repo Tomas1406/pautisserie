@@ -15,13 +15,22 @@ export interface RecetaIngrediente {
   costo: number;
 }
 
+export interface Porcion {
+  nombre: string;
+  costo: number;
+  precio: number;
+  margen: number;
+  unidadOutput?: string; // e.g. "1_unidad", "1/2_docena", etc.
+  factorOutput?: number; // how many individual units this output represents
+}
+
 export interface Producto {
   id: string;
   nombre: string;
   categoria: string;
   ingredientes: RecetaIngrediente[];
   costoTotal: number;
-  porciones: { nombre: string; costo: number; precio: number; margen: number }[];
+  porciones: Porcion[];
   imagenUrl?: string;
 }
 
@@ -31,6 +40,8 @@ export interface PedidoProducto {
   cantidad: number;
   costoUnitario: number;
   precioUnitario: number;
+  unidadOutput?: string;
+  factorOutput?: number;
 }
 
 export interface PedidoIngrediente {
@@ -51,8 +62,20 @@ export interface Pedido {
   ganancia: number;
   ingredientesNecesarios: PedidoIngrediente[];
   notas: string;
+  cliente: string;
+  pagoEstado: string;
   createdAt: string;
 }
+
+export const OUTPUT_UNITS = [
+  { value: "1/2_unidad", label: "1/2 Unidad", factor: 0.5 },
+  { value: "1_unidad", label: "1 Unidad", factor: 1 },
+  { value: "1/2_docena", label: "1/2 Docena", factor: 6 },
+  { value: "1_docena", label: "1 Docena", factor: 12 },
+];
+
+export const getOutputUnit = (value?: string) =>
+  OUTPUT_UNITS.find(u => u.value === value) || OUTPUT_UNITS[1];
 
 export const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("es-AR", {

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useIngredientes } from "@/context/IngredientesContext";
-import { formatCurrency, type Producto } from "@/data/productos";
+import { formatCurrency, OUTPUT_UNITS, getOutputUnit, type Producto } from "@/data/productos";
 import { Plus, Trash2, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,7 +24,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   const [nombre, setNombre] = useState("");
   const [categoria, setCategoria] = useState(CATEGORIAS[0]);
   const [lineas, setLineas] = useState<IngredienteLinea[]>([{ ingredienteId: "", cantidad: "" }]);
-  const [unidades, setUnidades] = useState("1");
+  const [unidadOutput, setUnidadOutput] = useState("1_unidad");
   const [precioVenta, setPrecioVenta] = useState("");
   const [guardando, setGuardando] = useState(false);
 
@@ -32,10 +32,9 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     if (open && productoEditar) {
       setNombre(productoEditar.nombre);
       setCategoria(productoEditar.categoria);
-      const costoUnidad = productoEditar.porciones[0]?.costo || 0;
-      const unidadesCalc = costoUnidad > 0 ? Math.round(productoEditar.costoTotal / costoUnidad) : 1;
-      setUnidades(unidadesCalc.toString());
-      setPrecioVenta((productoEditar.porciones[0]?.precio || 0).toString());
+      const porcion = productoEditar.porciones[0];
+      setUnidadOutput(porcion?.unidadOutput || "1_unidad");
+      setPrecioVenta((porcion?.precio || 0).toString());
       setLineas(productoEditar.ingredientes.map(ri => ({
         ingredienteId: ri.ingredienteId,
         cantidad: ri.cantidad.toString(),
@@ -44,7 +43,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
       setNombre("");
       setCategoria(CATEGORIAS[0]);
       setLineas([{ ingredienteId: "", cantidad: "" }]);
-      setUnidades("1");
+      setUnidadOutput("1_unidad");
       setPrecioVenta("");
     }
   }, [open, productoEditar]);
@@ -63,10 +62,10 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     return acc + ing.precioUnitario * cant;
   }, 0);
 
-  const unidadesNum = parseInt(unidades) || 1;
-  const costoUnidad = costoTotal / unidadesNum;
+  const outputUnit = getOutputUnit(unidadOutput);
+  const costoOutput = outputUnit.factor > 0 ? costoTotal / outputUnit.factor : costoTotal;
   const precioNum = parseFloat(precioVenta) || 0;
-  const margen = costoUnidad > 0 ? ((precioNum - costoUnidad) / costoUnidad) * 100 : 0;
+  const margen = costoOutput > 0 ? ((precioNum - costoOutput) / costoOutput) * 100 : 0;
 
   const guardar = async () => {
     if (!nombre.trim()) { toast.error("Ingresá un nombre"); return; }
@@ -76,13 +75,19 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     if (ingredientesValidos.length === 0) { toast.error("Agregá al menos un ingrediente"); return; }
     if (precioNum <= 0) { toast.error("Ingresá un precio de venta"); return; }
 
-    const data = {
+    const data: any = {
       nombre: nombre.trim(),
       categoria,
       ingredientes: ingredientesValidos,
-      unidadesPorReceta: unidadesNum,
+      unidadesPorReceta: outputUnit.factor,
       precioVenta: precioNum,
+      unidadOutput: unidadOutput,
     };
+
+    // When editing, preserve the existing image
+    if (productoEditar) {
+      data.imagenUrl = productoEditar.imagenUrl;
+    }
 
     setGuardando(true);
     try {
@@ -178,17 +183,17 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Unidades por receta</label>
-              <input
-                type="number"
-                value={unidades}
-                onChange={e => setUnidades(e.target.value)}
-                min="1"
+              <label className="text-sm font-medium text-foreground mb-1 block">Unidad de output</label>
+              <select
+                value={unidadOutput}
+                onChange={e => setUnidadOutput(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              >
+                {OUTPUT_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Precio de venta ($)</label>
+              <label className="text-sm font-medium text-foreground mb-1 block">Precio venta ({outputUnit.label})</label>
               <input
                 type="number"
                 value={precioVenta}
@@ -206,8 +211,8 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
                 <span className="font-medium text-foreground">{formatCurrency(costoTotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Costo por unidad</span>
-                <span className="font-medium text-foreground">{formatCurrency(costoUnidad)}</span>
+                <span className="text-muted-foreground">Costo por {outputUnit.label}</span>
+                <span className="font-medium text-foreground">{formatCurrency(costoOutput)}</span>
               </div>
               {precioNum > 0 && (
                 <div className="flex justify-between text-sm pt-1 border-t border-border">
