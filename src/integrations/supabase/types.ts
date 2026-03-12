@@ -59,6 +59,7 @@ export type Database = {
           ingredientes_necesarios: Json
           ingreso_total: number
           notas: string | null
+          ordenes: Json
           pago_estado: string
           productos: Json
           updated_at: string
@@ -74,6 +75,7 @@ export type Database = {
           ingredientes_necesarios?: Json
           ingreso_total?: number
           notas?: string | null
+          ordenes?: Json
           pago_estado?: string
           productos?: Json
           updated_at?: string
@@ -89,6 +91,7 @@ export type Database = {
           ingredientes_necesarios?: Json
           ingreso_total?: number
           notas?: string | null
+          ordenes?: Json
           pago_estado?: string
           productos?: Json
           updated_at?: string
@@ -105,6 +108,7 @@ export type Database = {
           ingredientes: Json
           nombre: string
           porciones: Json
+          unidades_por_receta: number
           updated_at: string
         }
         Insert: {
@@ -116,6 +120,7 @@ export type Database = {
           ingredientes?: Json
           nombre: string
           porciones?: Json
+          unidades_por_receta?: number
           updated_at?: string
         }
         Update: {
@@ -127,6 +132,7 @@ export type Database = {
           ingredientes?: Json
           nombre?: string
           porciones?: Json
+          unidades_por_receta?: number
           updated_at?: string
         }
         Relationships: []
