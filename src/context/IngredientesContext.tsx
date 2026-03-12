@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { type Ingrediente, type Producto, type Pedido, type Orden, getOutputUnit } from "@/data/productos";
+import { type Ingrediente, type Producto, type Pedido, type Orden } from "@/data/productos";
 
 interface NuevoProducto {
   nombre: string;
