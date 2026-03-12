@@ -147,7 +147,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
     const { data: allIngs } = await supabase.from("ingredientes").select("*");
     if (!allProducts || !allIngs) return;
 
-    const ingMap = new Map(allIngs.map((i: any) => [i.id, { pu: Number(i.precio_unitario), unidad: i.unidad }]));
+    const ingMap = new Map(allIngs.map((i: any) => [i.id, { pu: Number(i.precio_unitario), unidad: i.unidad, nombre: i.nombre }]));
 
     for (const prod of allProducts) {
       const ings = (prod.ingredientes as any[]);
