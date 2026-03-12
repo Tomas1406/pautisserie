@@ -87,6 +87,7 @@ export const OUTPUT_UNITS = [
 export const getOutputUnit = (value?: string) =>
   OUTPUT_UNITS.find(u => u.value === value) || OUTPUT_UNITS[1];
 
+
 export const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
