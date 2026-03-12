@@ -3,13 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Dashboard from "@/pages/Dashboard";
 import Ingredientes from "@/pages/Ingredientes";
+import Pedidos from "@/pages/Pedidos";
+import PanelControl from "@/pages/PanelControl";
 import { IngredientesProvider } from "@/context/IngredientesContext";
 import logo from "@/assets/logo-pautisserie.jpeg";
-import { LayoutDashboard, ShoppingBasket, LogOut } from "lucide-react";
+import { LayoutDashboard, ShoppingBasket, LogOut, ClipboardList, BarChart3 } from "lucide-react";
 
 const tabs = [
+  { id: "panel", label: "Panel", icon: BarChart3 },
   { id: "productos", label: "Productos", icon: LayoutDashboard },
   { id: "ingredientes", label: "Ingredientes", icon: ShoppingBasket },
+  { id: "pedidos", label: "Pedidos", icon: ClipboardList },
 ] as const;
 
 type Tab = typeof tabs[number]["id"];
@@ -37,8 +41,10 @@ const AppLayout = () => {
 
       <IngredientesProvider>
         <main className="flex-1 px-4 py-4 pb-24">
+          {activeTab === "panel" && <PanelControl />}
           {activeTab === "productos" && <Dashboard />}
           {activeTab === "ingredientes" && <Ingredientes />}
+          {activeTab === "pedidos" && <Pedidos />}
         </main>
       </IngredientesProvider>
 
@@ -51,12 +57,12 @@ const AppLayout = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center gap-1 py-1 px-4 transition-colors ${
+                className={`flex flex-col items-center gap-1 py-1 px-3 transition-colors ${
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-xs font-body font-medium">{tab.label}</span>
+                <span className="text-[10px] font-body font-medium">{tab.label}</span>
               </button>
             );
           })}

@@ -55,7 +55,7 @@ const Ingredientes = () => {
     setGuardando(true);
     try {
       if (editId) {
-        await actualizarIngrediente(editId, p, c);
+        await actualizarIngrediente(editId, p, c, unidad);
         toast.success("Ingrediente actualizado. Costos de productos recalculados.");
       } else {
         await agregarIngrediente({ nombre: nombre.trim(), precio: p, cantidad: c, unidad });
