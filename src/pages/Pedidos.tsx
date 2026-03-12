@@ -3,7 +3,8 @@ import { formatCurrency, type Pedido, type Orden } from "@/data/productos";
 import { useIngredientes } from "@/context/IngredientesContext";
 import { Plus, ChevronDown, ChevronUp, Trash2, Pencil, Loader2, CalendarDays, Check, User, Copy, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 const ESTADOS = [
