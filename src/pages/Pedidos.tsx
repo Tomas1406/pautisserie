@@ -139,11 +139,13 @@ const Pedidos = () => {
     }
   };
 
-  const confirmarEliminar = async (pedido: Pedido) => {
-    if (window.confirm("¿Eliminar este pedido y todas sus órdenes?")) {
-      await eliminarPedido(pedido.id);
-      toast.success("Pedido eliminado");
-    }
+  const [deleteDialogPedido, setDeleteDialogPedido] = useState<Pedido | null>(null);
+
+  const confirmarEliminar = async () => {
+    if (!deleteDialogPedido) return;
+    await eliminarPedido(deleteDialogPedido.id);
+    toast.success("Pedido eliminado");
+    setDeleteDialogPedido(null);
   };
 
   const copiarIngredientes = (pedido: Pedido) => {
