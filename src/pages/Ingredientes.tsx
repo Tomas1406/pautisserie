@@ -55,7 +55,7 @@ const Ingredientes = () => {
     setGuardando(true);
     try {
       if (editId) {
-        await actualizarIngrediente(editId, p, c, unidad);
+        await actualizarIngrediente(editId, p, c, unidad, nombre.trim());
         toast.success("Ingrediente actualizado. Costos de productos recalculados.");
       } else {
         await agregarIngrediente({ nombre: nombre.trim(), precio: p, cantidad: c, unidad });
@@ -207,17 +207,15 @@ const Ingredientes = () => {
             <DialogTitle>{editId ? "Editar Ingrediente" : "Nuevo Ingrediente"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {!editId && (
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">Nombre</label>
-                <input
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Ej: Chocolate"
-                  className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-            )}
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">Nombre</label>
+              <input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Ej: Chocolate"
+                className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-1 block">Precio ($)</label>
               <input

@@ -200,7 +200,7 @@ const ImportProductoDialog = ({ open, onOpenChange }: Props) => {
         categoria: recipe.categoria,
         ingredientes: validIngredients,
         unidadesPorReceta: recipe.unidades_por_receta || 1,
-        porciones: [{ unidadOutput: "1_unidad", precio: parseFloat(precioVenta) }],
+        porciones: [{ nombre: "Unidad", factorOutput: 1, precio: parseFloat(precioVenta) }],
       });
 
       toast.success(`"${recipe.nombre}" creado exitosamente`);

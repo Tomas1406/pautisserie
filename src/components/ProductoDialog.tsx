@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useIngredientes } from "@/context/IngredientesContext";
-import { formatCurrency, OUTPUT_UNITS, getOutputUnit, type Producto } from "@/data/productos";
+import { formatCurrency, type Producto } from "@/data/productos";
 import { Plus, Trash2, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,7 +14,8 @@ interface IngredienteLinea {
 }
 
 interface PorcionLinea {
-  unidadOutput: string;
+  nombre: string;
+  factorOutput: string;
   precio: string;
 }
 
@@ -30,7 +31,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   const [categoria, setCategoria] = useState(CATEGORIAS[0]);
   const [lineas, setLineas] = useState<IngredienteLinea[]>([{ ingredienteId: "", cantidad: "" }]);
   const [unidadesPorReceta, setUnidadesPorReceta] = useState("1");
-  const [porcionesLineas, setPorcionesLineas] = useState<PorcionLinea[]>([{ unidadOutput: "1_unidad", precio: "" }]);
+  const [porcionesLineas, setPorcionesLineas] = useState<PorcionLinea[]>([{ nombre: "Unidad", factorOutput: "1", precio: "" }]);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -43,7 +44,8 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
         cantidad: ri.cantidad.toString(),
       })));
       setPorcionesLineas(productoEditar.porciones.map(p => ({
-        unidadOutput: p.unidadOutput,
+        nombre: p.nombre || "Unidad",
+        factorOutput: (p.factorOutput || 1).toString(),
         precio: p.precio.toString(),
       })));
     } else if (open) {
@@ -51,7 +53,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
       setCategoria(CATEGORIAS[0]);
       setLineas([{ ingredienteId: "", cantidad: "" }]);
       setUnidadesPorReceta("1");
-      setPorcionesLineas([{ unidadOutput: "1_unidad", precio: "" }]);
+      setPorcionesLineas([{ nombre: "Unidad", factorOutput: "1", precio: "" }]);
     }
   }, [open, productoEditar]);
 
@@ -61,7 +63,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     setLineas(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: val } : l));
   };
 
-  const addPorcion = () => setPorcionesLineas(prev => [...prev, { unidadOutput: "1_unidad", precio: "" }]);
+  const addPorcion = () => setPorcionesLineas(prev => [...prev, { nombre: "", factorOutput: "1", precio: "" }]);
   const removePorcion = (i: number) => setPorcionesLineas(prev => prev.filter((_, idx) => idx !== i));
 
   const costoTotal = lineas.reduce((acc, l) => {
@@ -83,9 +85,13 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     if (ingredientesValidos.length === 0) { toast.error("Agregá al menos un ingrediente"); return; }
 
     const porcionesValidas = porcionesLineas
-      .filter(p => parseFloat(p.precio) > 0)
-      .map(p => ({ unidadOutput: p.unidadOutput, precio: parseFloat(p.precio) }));
-    if (porcionesValidas.length === 0) { toast.error("Agregá al menos un formato de venta con precio"); return; }
+      .filter(p => p.nombre.trim() && parseFloat(p.precio) > 0)
+      .map(p => ({
+        nombre: p.nombre.trim(),
+        factorOutput: parseFloat(p.factorOutput.replace(",", ".")) || 1,
+        precio: parseFloat(p.precio),
+      }));
+    if (porcionesValidas.length === 0) { toast.error("Agregá al menos un formato de venta con nombre y precio"); return; }
 
     const data: any = {
       nombre: nombre.trim(),
@@ -192,19 +198,22 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
             </div>
             <div className="space-y-2">
               {porcionesLineas.map((pl, i) => {
-                const ou = getOutputUnit(pl.unidadOutput);
-                const costoPorcion = costoPerUnit * ou.factor;
+                const factor = parseFloat(pl.factorOutput.replace(",", ".")) || 1;
+                const costoPorcion = costoPerUnit * factor;
                 const precioNum = parseFloat(pl.precio) || 0;
                 const margen = costoPorcion > 0 ? ((precioNum - costoPorcion) / costoPorcion) * 100 : 0;
                 return (
                   <div key={i} className="space-y-1">
                     <div className="flex gap-2 items-center">
-                      <select value={pl.unidadOutput}
-                        onChange={e => setPorcionesLineas(prev => prev.map((p, idx) => idx === i ? { ...p, unidadOutput: e.target.value } : p))}
-                        className="flex-1 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30">
-                        {OUTPUT_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-                      </select>
-                      <div className="relative w-28">
+                      <input value={pl.nombre}
+                        onChange={e => setPorcionesLineas(prev => prev.map((p, idx) => idx === i ? { ...p, nombre: e.target.value } : p))}
+                        placeholder="Ej: Docena, Grande..."
+                        className="flex-1 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                      <input value={pl.factorOutput}
+                        onChange={e => setPorcionesLineas(prev => prev.map((p, idx) => idx === i ? { ...p, factorOutput: e.target.value } : p))}
+                        placeholder="Uds"
+                        className="w-16 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 text-center" />
+                      <div className="relative w-24">
                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
                         <input type="number" value={pl.precio}
                           onChange={e => setPorcionesLineas(prev => prev.map((p, idx) => idx === i ? { ...p, precio: e.target.value } : p))}

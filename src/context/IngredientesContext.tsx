@@ -1,13 +1,13 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { type Ingrediente, type Producto, type Pedido, type Orden, getOutputUnit } from "@/data/productos";
+import { type Ingrediente, type Producto, type Pedido, type Orden } from "@/data/productos";
 
 interface NuevoProducto {
   nombre: string;
   categoria: string;
   ingredientes: { ingredienteId: string; cantidad: number }[];
   unidadesPorReceta: number;
-  porciones: { unidadOutput: string; precio: number }[];
+  porciones: { nombre: string; factorOutput: number; precio: number }[];
   imagenUrl?: string;
 }
 
@@ -31,7 +31,7 @@ interface IngredientesContextType {
   pedidos: Pedido[];
   loading: boolean;
   agregarIngrediente: (ing: Omit<Ingrediente, "id" | "precioUnitario">) => Promise<void>;
-  actualizarIngrediente: (id: string, precio: number, cantidad: number, unidad?: string) => Promise<void>;
+  actualizarIngrediente: (id: string, precio: number, cantidad: number, unidad?: string, nombre?: string) => Promise<void>;
   eliminarIngrediente: (id: string) => Promise<void>;
   agregarProducto: (prod: NuevoProducto) => Promise<void>;
   actualizarProducto: (id: string, prod: NuevoProducto) => Promise<void>;
@@ -135,10 +135,11 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const actualizarIngrediente = useCallback(async (id: string, precio: number, cantidad: number, unidad?: string) => {
+  const actualizarIngrediente = useCallback(async (id: string, precio: number, cantidad: number, unidad?: string, nombre?: string) => {
     const precioUnitario = cantidad > 0 ? precio / cantidad : 0;
     const updateData: any = { precio, cantidad, precio_unitario: precioUnitario, updated_at: new Date().toISOString() };
     if (unidad) updateData.unidad = unidad;
+    if (nombre) updateData.nombre = nombre;
     await supabase.from("ingredientes").update(updateData).eq("id", id);
 
     // Recalculate all products using this ingredient
@@ -146,7 +147,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
     const { data: allIngs } = await supabase.from("ingredientes").select("*");
     if (!allProducts || !allIngs) return;
 
-    const ingMap = new Map(allIngs.map((i: any) => [i.id, { pu: Number(i.precio_unitario), unidad: i.unidad }]));
+    const ingMap = new Map(allIngs.map((i: any) => [i.id, { pu: Number(i.precio_unitario), unidad: i.unidad, nombre: i.nombre }]));
 
     for (const prod of allProducts) {
       const ings = (prod.ingredientes as any[]);
@@ -156,7 +157,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
       const updatedIngs = ings.map((ri: any) => {
         const info = ingMap.get(ri.ingredienteId);
         const pu = info?.pu ?? 0;
-        return { ...ri, costo: pu * ri.cantidad, unidad: info?.unidad ?? ri.unidad };
+        return { ...ri, costo: pu * ri.cantidad, unidad: info?.unidad ?? ri.unidad, nombre: info?.nombre ?? ri.nombre };
       });
       const costoTotal = updatedIngs.reduce((acc: number, ri: any) => acc + ri.costo, 0);
       const unidadesPorReceta = Number(prod.unidades_por_receta) || 1;
@@ -181,13 +182,12 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Productos ───
 
-  const buildPorciones = (costoTotal: number, unidadesPorReceta: number, porcionesInput: { unidadOutput: string; precio: number }[]) => {
+  const buildPorciones = (costoTotal: number, unidadesPorReceta: number, porcionesInput: { nombre: string; factorOutput: number; precio: number }[]) => {
     const costoPerUnit = unidadesPorReceta > 0 ? costoTotal / unidadesPorReceta : costoTotal;
     return porcionesInput.map(p => {
-      const ou = getOutputUnit(p.unidadOutput);
-      const costoPorcion = costoPerUnit * ou.factor;
+      const costoPorcion = costoPerUnit * p.factorOutput;
       const margen = costoPorcion > 0 ? Math.round(((p.precio - costoPorcion) / costoPorcion) * 100) : 0;
-      return { nombre: ou.label, costo: costoPorcion, precio: p.precio, margen, unidadOutput: ou.value, factorOutput: ou.factor };
+      return { nombre: p.nombre, costo: costoPorcion, precio: p.precio, margen, unidadOutput: p.nombre, factorOutput: p.factorOutput };
     });
   };
 
