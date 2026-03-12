@@ -187,8 +187,12 @@ const ProductoCard = ({ producto, expandido, onToggle, onEditar, onEliminar, onS
               ))}
             </div>
             <div className="flex justify-between text-sm font-bold mt-2 pt-2 border-t border-border">
-              <span>Total</span>
+              <span>Total ({producto.unidadesPorReceta} uds)</span>
               <span>{formatCurrency(producto.costoTotal)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>Costo por unidad</span>
+              <span>{formatCurrency(producto.unidadesPorReceta > 0 ? producto.costoTotal / producto.unidadesPorReceta : producto.costoTotal)}</span>
             </div>
           </div>
 
