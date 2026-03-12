@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { formatCurrency, type Pedido } from "@/data/productos";
+import { formatCurrency, getOutputUnit, type Pedido } from "@/data/productos";
 import { useIngredientes } from "@/context/IngredientesContext";
-import { Plus, ChevronDown, ChevronUp, Trash2, Pencil, Loader2, CalendarDays, Package, Check } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Trash2, Pencil, Loader2, CalendarDays, Check, User, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -13,18 +13,25 @@ const ESTADOS = [
   { value: "cancelado", label: "Cancelado", color: "bg-destructive/15 text-destructive" },
 ];
 
+const PAGO_ESTADOS = [
+  { value: "no_pagado", label: "No pagado", color: "bg-destructive/15 text-destructive" },
+  { value: "pagado", label: "Pagado", color: "bg-success/15 text-success" },
+];
+
 interface LineaPedido {
   productoId: string;
   cantidad: string;
 }
 
 const Pedidos = () => {
-  const { pedidos, productos, loading, agregarPedido, actualizarPedido, eliminarPedido, cambiarEstadoPedido } = useIngredientes();
+  const { pedidos, productos, loading, agregarPedido, actualizarPedido, eliminarPedido, cambiarEstadoPedido, cambiarPagoEstado } = useIngredientes();
   const [expandido, setExpandido] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editPedido, setEditPedido] = useState<Pedido | null>(null);
   const [fechaEntrega, setFechaEntrega] = useState("");
   const [notas, setNotas] = useState("");
+  const [cliente, setCliente] = useState("");
+  const [pagoEstado, setPagoEstado] = useState("no_pagado");
   const [lineas, setLineas] = useState<LineaPedido[]>([{ productoId: "", cantidad: "1" }]);
   const [guardando, setGuardando] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState("todos");
@@ -35,6 +42,8 @@ const Pedidos = () => {
     setEditPedido(null);
     setFechaEntrega("");
     setNotas("");
+    setCliente("");
+    setPagoEstado("no_pagado");
     setLineas([{ productoId: "", cantidad: "1" }]);
     setDialogOpen(true);
   };
@@ -43,6 +52,8 @@ const Pedidos = () => {
     setEditPedido(pedido);
     setFechaEntrega(pedido.fechaEntrega);
     setNotas(pedido.notas);
+    setCliente(pedido.cliente || "");
+    setPagoEstado(pedido.pagoEstado || "no_pagado");
     setLineas(pedido.productos.map(p => ({ productoId: p.productoId, cantidad: p.cantidad.toString() })));
     setDialogOpen(true);
   };
@@ -51,6 +62,7 @@ const Pedidos = () => {
   const removeLinea = (i: number) => setLineas(prev => prev.filter((_, idx) => idx !== i));
 
   const guardar = async () => {
+    if (!cliente.trim()) { toast.error("Ingresá el nombre del cliente"); return; }
     if (!fechaEntrega) { toast.error("Seleccioná una fecha de entrega"); return; }
     const prodsValidos = lineas
       .filter(l => l.productoId && parseInt(l.cantidad) > 0)
@@ -60,10 +72,10 @@ const Pedidos = () => {
     setGuardando(true);
     try {
       if (editPedido) {
-        await actualizarPedido(editPedido.id, { fechaEntrega, productos: prodsValidos, notas });
+        await actualizarPedido(editPedido.id, { fechaEntrega, productos: prodsValidos, notas, cliente, pagoEstado });
         toast.success("Pedido actualizado");
       } else {
-        await agregarPedido({ fechaEntrega, productos: prodsValidos, notas });
+        await agregarPedido({ fechaEntrega, productos: prodsValidos, notas, cliente, pagoEstado });
         toast.success("Pedido creado");
       }
       setDialogOpen(false);
@@ -82,6 +94,7 @@ const Pedidos = () => {
   };
 
   const getEstadoInfo = (estado: string) => ESTADOS.find(e => e.value === estado) || ESTADOS[0];
+  const getPagoInfo = (pago: string) => PAGO_ESTADOS.find(e => e.value === pago) || PAGO_ESTADOS[0];
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -100,6 +113,13 @@ const Pedidos = () => {
     const precioU = prod.porciones[0]?.precio ?? 0;
     return acc + precioU * (parseInt(l.cantidad) || 0);
   }, 0);
+
+  const getProductOutputLabel = (productoId: string) => {
+    const prod = productos.find(p => p.id === productoId);
+    if (!prod) return "";
+    const porcion = prod.porciones[0];
+    return porcion ? getOutputUnit(porcion.unidadOutput).label : "Unidad";
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -144,6 +164,7 @@ const Pedidos = () => {
         {pedidosFiltrados.map(pedido => {
           const isExpanded = expandido === pedido.id;
           const estadoInfo = getEstadoInfo(pedido.estado);
+          const pagoInfo = getPagoInfo(pedido.pagoEstado);
           return (
             <div key={pedido.id} className="bg-card rounded-xl overflow-hidden">
               <button onClick={() => setExpandido(isExpanded ? null : pedido.id)} className="w-full p-4 flex items-center gap-3 text-left">
@@ -154,37 +175,62 @@ const Pedidos = () => {
                   <p className="font-display text-base font-semibold text-foreground">
                     {new Date(pedido.fechaEntrega + "T12:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
                   </p>
-                  <p className="text-xs text-muted-foreground font-body">
-                    {pedido.productos.length} producto{pedido.productos.length !== 1 ? "s" : ""} · {formatCurrency(pedido.ingresoTotal)}
-                  </p>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground font-body">
+                    {pedido.cliente && <><User className="w-3 h-3" /><span className="truncate max-w-[100px]">{pedido.cliente}</span><span>·</span></>}
+                    <span>{pedido.productos.length} prod. · {formatCurrency(pedido.ingresoTotal)}</span>
+                  </div>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${estadoInfo.color}`}>{estadoInfo.label}</span>
+                <div className="flex flex-col gap-1 items-end flex-shrink-0">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${estadoInfo.color}`}>{estadoInfo.label}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pagoInfo.color}`}>{pagoInfo.label}</span>
+                </div>
                 {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
               </button>
 
               {isExpanded && (
                 <div className="px-4 pb-4 space-y-3">
                   {/* Estado buttons */}
-                  <div className="flex gap-1 flex-wrap">
-                    {ESTADOS.map(e => (
-                      <button key={e.value} onClick={() => cambiarEstadoPedido(pedido.id, e.value)}
-                        className={`text-xs px-2.5 py-1 rounded-full transition-all ${
-                          pedido.estado === e.value ? e.color + " ring-1 ring-current" : "bg-secondary text-muted-foreground"
-                        }`}>
-                        {e.label}
-                      </button>
-                    ))}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Estado</p>
+                    <div className="flex gap-1 flex-wrap">
+                      {ESTADOS.map(e => (
+                        <button key={e.value} onClick={() => cambiarEstadoPedido(pedido.id, e.value)}
+                          className={`text-xs px-2.5 py-1 rounded-full transition-all ${
+                            pedido.estado === e.value ? e.color + " ring-1 ring-current" : "bg-secondary text-muted-foreground"
+                          }`}>
+                          {e.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pago buttons */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Pago</p>
+                    <div className="flex gap-1 flex-wrap">
+                      {PAGO_ESTADOS.map(e => (
+                        <button key={e.value} onClick={() => cambiarPagoEstado(pedido.id, e.value)}
+                          className={`text-xs px-2.5 py-1 rounded-full transition-all ${
+                            pedido.pagoEstado === e.value ? e.color + " ring-1 ring-current" : "bg-secondary text-muted-foreground"
+                          }`}>
+                          {e.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Products */}
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Productos</p>
-                    {pedido.productos.map((pp, i) => (
-                      <div key={i} className="flex justify-between text-sm py-1">
-                        <span className="text-foreground">{pp.nombre} <span className="text-muted-foreground">×{pp.cantidad}</span></span>
-                        <span className="text-foreground font-medium">{formatCurrency(pp.precioUnitario * pp.cantidad)}</span>
-                      </div>
-                    ))}
+                    {pedido.productos.map((pp, i) => {
+                      const outputLabel = getOutputUnit(pp.unidadOutput).label;
+                      return (
+                        <div key={i} className="flex justify-between text-sm py-1">
+                          <span className="text-foreground">{pp.nombre} <span className="text-muted-foreground">×{pp.cantidad} {outputLabel}</span></span>
+                          <span className="text-foreground font-medium">{formatCurrency(pp.precioUnitario * pp.cantidad)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Financials */}
@@ -243,9 +289,25 @@ const Pedidos = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">Fecha de entrega</label>
-              <input type="date" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)}
+              <label className="text-sm font-medium text-foreground mb-1 block">Nombre del cliente</label>
+              <input value={cliente} onChange={e => setCliente(e.target.value)}
+                placeholder="Ej: María García"
                 className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Fecha de entrega</label>
+                <input type="date" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Estado de pago</label>
+                <select value={pagoEstado} onChange={e => setPagoEstado(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30">
+                  {PAGO_ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+                </select>
+              </div>
             </div>
 
             <div>
@@ -256,24 +318,33 @@ const Pedidos = () => {
                 </Button>
               </div>
               <div className="space-y-2">
-                {lineas.map((linea, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <select value={linea.productoId}
-                      onChange={e => setLineas(prev => prev.map((l, idx) => idx === i ? { ...l, productoId: e.target.value } : l))}
-                      className="flex-1 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30">
-                      <option value="">Seleccionar...</option>
-                      {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                    </select>
-                    <input type="number" value={linea.cantidad} min="1"
-                      onChange={e => setLineas(prev => prev.map((l, idx) => idx === i ? { ...l, cantidad: e.target.value } : l))}
-                      className="w-16 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 text-center" />
-                    {lineas.length > 1 && (
-                      <button onClick={() => removeLinea(i)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                {lineas.map((linea, i) => {
+                  const outputLabel = linea.productoId ? getProductOutputLabel(linea.productoId) : "";
+                  return (
+                    <div key={i} className="flex gap-2 items-center">
+                      <select value={linea.productoId}
+                        onChange={e => setLineas(prev => prev.map((l, idx) => idx === i ? { ...l, productoId: e.target.value } : l))}
+                        className="flex-1 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        <option value="">Seleccionar...</option>
+                        {productos.map(p => {
+                          const ol = getOutputUnit(p.porciones[0]?.unidadOutput).label;
+                          return <option key={p.id} value={p.id}>{p.nombre} ({ol})</option>;
+                        })}
+                      </select>
+                      <div className="relative">
+                        <input type="number" value={linea.cantidad} min="1"
+                          onChange={e => setLineas(prev => prev.map((l, idx) => idx === i ? { ...l, cantidad: e.target.value } : l))}
+                          className="w-16 px-2 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 text-center" />
+                      </div>
+                      {outputLabel && <span className="text-xs text-muted-foreground whitespace-nowrap">{outputLabel}</span>}
+                      {lineas.length > 1 && (
+                        <button onClick={() => removeLinea(i)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
