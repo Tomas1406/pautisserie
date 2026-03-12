@@ -340,7 +340,7 @@ const Pedidos = () => {
                     <Button size="sm" variant="outline" onClick={() => abrirEditar(pedido)} className="flex-1">
                       <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => confirmarEliminar(pedido)} className="text-destructive hover:text-destructive">
+                    <Button size="sm" variant="outline" onClick={() => setDeleteDialogPedido(pedido)} className="text-destructive hover:text-destructive">
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
