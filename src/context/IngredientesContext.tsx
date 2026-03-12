@@ -31,7 +31,7 @@ interface IngredientesContextType {
   pedidos: Pedido[];
   loading: boolean;
   agregarIngrediente: (ing: Omit<Ingrediente, "id" | "precioUnitario">) => Promise<void>;
-  actualizarIngrediente: (id: string, precio: number, cantidad: number, unidad?: string) => Promise<void>;
+  actualizarIngrediente: (id: string, precio: number, cantidad: number, unidad?: string, nombre?: string) => Promise<void>;
   eliminarIngrediente: (id: string) => Promise<void>;
   agregarProducto: (prod: NuevoProducto) => Promise<void>;
   actualizarProducto: (id: string, prod: NuevoProducto) => Promise<void>;
