@@ -182,13 +182,12 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Productos ───
 
-  const buildPorciones = (costoTotal: number, unidadesPorReceta: number, porcionesInput: { unidadOutput: string; precio: number }[]) => {
+  const buildPorciones = (costoTotal: number, unidadesPorReceta: number, porcionesInput: { nombre: string; factorOutput: number; precio: number }[]) => {
     const costoPerUnit = unidadesPorReceta > 0 ? costoTotal / unidadesPorReceta : costoTotal;
     return porcionesInput.map(p => {
-      const ou = getOutputUnit(p.unidadOutput);
-      const costoPorcion = costoPerUnit * ou.factor;
+      const costoPorcion = costoPerUnit * p.factorOutput;
       const margen = costoPorcion > 0 ? Math.round(((p.precio - costoPorcion) / costoPorcion) * 100) : 0;
-      return { nombre: ou.label, costo: costoPorcion, precio: p.precio, margen, unidadOutput: ou.value, factorOutput: ou.factor };
+      return { nombre: p.nombre, costo: costoPorcion, precio: p.precio, margen, unidadOutput: p.nombre, factorOutput: p.factorOutput };
     });
   };
 
