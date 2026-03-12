@@ -49,6 +49,7 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          cliente: string
           costo_total: number
           created_at: string
           estado: string
@@ -58,10 +59,12 @@ export type Database = {
           ingredientes_necesarios: Json
           ingreso_total: number
           notas: string | null
+          pago_estado: string
           productos: Json
           updated_at: string
         }
         Insert: {
+          cliente?: string
           costo_total?: number
           created_at?: string
           estado?: string
@@ -71,10 +74,12 @@ export type Database = {
           ingredientes_necesarios?: Json
           ingreso_total?: number
           notas?: string | null
+          pago_estado?: string
           productos?: Json
           updated_at?: string
         }
         Update: {
+          cliente?: string
           costo_total?: number
           created_at?: string
           estado?: string
@@ -84,6 +89,7 @@ export type Database = {
           ingredientes_necesarios?: Json
           ingreso_total?: number
           notas?: string | null
+          pago_estado?: string
           productos?: Json
           updated_at?: string
         }
