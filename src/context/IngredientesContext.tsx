@@ -7,7 +7,7 @@ interface NuevoProducto {
   categoria: string;
   ingredientes: { ingredienteId: string; cantidad: number }[];
   unidadesPorReceta: number;
-  porciones: { unidadOutput: string; precio: number }[];
+  porciones: { nombre: string; factorOutput: number; precio: number }[];
   imagenUrl?: string;
 }
 
