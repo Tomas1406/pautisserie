@@ -135,10 +135,11 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const actualizarIngrediente = useCallback(async (id: string, precio: number, cantidad: number, unidad?: string) => {
+  const actualizarIngrediente = useCallback(async (id: string, precio: number, cantidad: number, unidad?: string, nombre?: string) => {
     const precioUnitario = cantidad > 0 ? precio / cantidad : 0;
     const updateData: any = { precio, cantidad, precio_unitario: precioUnitario, updated_at: new Date().toISOString() };
     if (unidad) updateData.unidad = unidad;
+    if (nombre) updateData.nombre = nombre;
     await supabase.from("ingredientes").update(updateData).eq("id", id);
 
     // Recalculate all products using this ingredient
