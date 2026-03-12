@@ -3,7 +3,8 @@ import { formatCurrency, type Pedido, type Orden } from "@/data/productos";
 import { useIngredientes } from "@/context/IngredientesContext";
 import { Plus, ChevronDown, ChevronUp, Trash2, Pencil, Loader2, CalendarDays, Check, User, Copy, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 const ESTADOS = [
@@ -139,11 +140,13 @@ const Pedidos = () => {
     }
   };
 
-  const confirmarEliminar = async (pedido: Pedido) => {
-    if (window.confirm("¿Eliminar este pedido y todas sus órdenes?")) {
-      await eliminarPedido(pedido.id);
-      toast.success("Pedido eliminado");
-    }
+  const [deleteDialogPedido, setDeleteDialogPedido] = useState<Pedido | null>(null);
+
+  const confirmarEliminar = async () => {
+    if (!deleteDialogPedido) return;
+    await eliminarPedido(deleteDialogPedido.id);
+    toast.success("Pedido eliminado");
+    setDeleteDialogPedido(null);
   };
 
   const copiarIngredientes = (pedido: Pedido) => {
@@ -337,7 +340,7 @@ const Pedidos = () => {
                     <Button size="sm" variant="outline" onClick={() => abrirEditar(pedido)} className="flex-1">
                       <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => confirmarEliminar(pedido)} className="text-destructive hover:text-destructive">
+                    <Button size="sm" variant="outline" onClick={() => setDeleteDialogPedido(pedido)} className="text-destructive hover:text-destructive">
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -461,6 +464,23 @@ const Pedidos = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteDialogPedido} onOpenChange={(open) => !open && setDeleteDialogPedido(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar pedido?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el pedido y todas sus órdenes. No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarEliminar} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
