@@ -157,7 +157,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
       const updatedIngs = ings.map((ri: any) => {
         const info = ingMap.get(ri.ingredienteId);
         const pu = info?.pu ?? 0;
-        return { ...ri, costo: pu * ri.cantidad, unidad: info?.unidad ?? ri.unidad };
+        return { ...ri, costo: pu * ri.cantidad, unidad: info?.unidad ?? ri.unidad, nombre: info?.nombre ?? ri.nombre };
       });
       const costoTotal = updatedIngs.reduce((acc: number, ri: any) => acc + ri.costo, 0);
       const unidadesPorReceta = Number(prod.unidades_por_receta) || 1;
