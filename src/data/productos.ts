@@ -25,6 +25,35 @@ export interface Producto {
   imagenUrl?: string;
 }
 
+export interface PedidoProducto {
+  productoId: string;
+  nombre: string;
+  cantidad: number;
+  costoUnitario: number;
+  precioUnitario: number;
+}
+
+export interface PedidoIngrediente {
+  ingredienteId: string;
+  nombre: string;
+  cantidad: number;
+  unidad: string;
+  costo: number;
+}
+
+export interface Pedido {
+  id: string;
+  fechaEntrega: string;
+  estado: string;
+  productos: PedidoProducto[];
+  costoTotal: number;
+  ingresoTotal: number;
+  ganancia: number;
+  ingredientesNecesarios: PedidoIngrediente[];
+  notas: string;
+  createdAt: string;
+}
+
 export const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",

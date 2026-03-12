@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { type Ingrediente, type Producto } from "@/data/productos";
+import { type Ingrediente, type Producto, type Pedido } from "@/data/productos";
 
 interface NuevoProducto {
   nombre: string;
@@ -11,17 +11,28 @@ interface NuevoProducto {
   imagenUrl?: string;
 }
 
+interface NuevoPedido {
+  fechaEntrega: string;
+  productos: { productoId: string; cantidad: number }[];
+  notas?: string;
+}
+
 interface IngredientesContextType {
   ingredientes: Ingrediente[];
   productos: Producto[];
+  pedidos: Pedido[];
   loading: boolean;
   agregarIngrediente: (ing: Omit<Ingrediente, "id" | "precioUnitario">) => Promise<void>;
-  actualizarIngrediente: (id: string, precio: number, cantidad: number) => Promise<void>;
+  actualizarIngrediente: (id: string, precio: number, cantidad: number, unidad?: string) => Promise<void>;
   eliminarIngrediente: (id: string) => Promise<void>;
   agregarProducto: (prod: NuevoProducto) => Promise<void>;
   actualizarProducto: (id: string, prod: NuevoProducto) => Promise<void>;
   eliminarProducto: (id: string) => Promise<void>;
   subirImagenProducto: (productoId: string, file: File) => Promise<string>;
+  agregarPedido: (pedido: NuevoPedido) => Promise<void>;
+  actualizarPedido: (id: string, pedido: NuevoPedido) => Promise<void>;
+  eliminarPedido: (id: string) => Promise<void>;
+  cambiarEstadoPedido: (id: string, estado: string) => Promise<void>;
 }
 
 const IngredientesContext = createContext<IngredientesContextType | null>(null);
@@ -35,74 +46,69 @@ export const useIngredientes = () => {
 export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
   const [ingredientes, setIngredientes] = useState<Ingrediente[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const [ingRes, prodRes] = await Promise.all([
-        supabase.from("ingredientes").select("*").order("nombre"),
-        supabase.from("productos").select("*").order("nombre"),
-      ]);
+  const fetchData = useCallback(async () => {
+    const [ingRes, prodRes, pedRes] = await Promise.all([
+      supabase.from("ingredientes").select("*").order("nombre"),
+      supabase.from("productos").select("*").order("nombre"),
+      supabase.from("pedidos").select("*").order("fecha_entrega", { ascending: false }),
+    ]);
 
-      if (ingRes.data) {
-        setIngredientes(ingRes.data.map((r: any) => ({
-          id: r.id,
-          nombre: r.nombre,
-          precio: Number(r.precio),
-          cantidad: Number(r.cantidad),
-          unidad: r.unidad,
-          precioUnitario: Number(r.precio_unitario),
-        })));
-      }
+    if (ingRes.data) {
+      setIngredientes(ingRes.data.map((r: any) => ({
+        id: r.id, nombre: r.nombre, precio: Number(r.precio),
+        cantidad: Number(r.cantidad), unidad: r.unidad,
+        precioUnitario: Number(r.precio_unitario),
+      })));
+    }
 
-      if (prodRes.data) {
-        setProductos(prodRes.data.map((r: any) => ({
-          id: r.id,
-          nombre: r.nombre,
-          categoria: r.categoria,
-          ingredientes: r.ingredientes as any[],
-          costoTotal: Number(r.costo_total),
-          porciones: r.porciones as any[],
-          imagenUrl: r.imagen_url || undefined,
-        })));
-      }
+    if (prodRes.data) {
+      setProductos(prodRes.data.map((r: any) => ({
+        id: r.id, nombre: r.nombre, categoria: r.categoria,
+        ingredientes: r.ingredientes as any[], costoTotal: Number(r.costo_total),
+        porciones: r.porciones as any[], imagenUrl: r.imagen_url || undefined,
+      })));
+    }
 
-      setLoading(false);
-    };
+    if (pedRes.data) {
+      setPedidos(pedRes.data.map((r: any) => ({
+        id: r.id, fechaEntrega: r.fecha_entrega, estado: r.estado,
+        productos: r.productos as any[], costoTotal: Number(r.costo_total),
+        ingresoTotal: Number(r.ingreso_total), ganancia: Number(r.ganancia),
+        ingredientesNecesarios: r.ingredientes_necesarios as any[],
+        notas: r.notas || "", createdAt: r.created_at,
+      })));
+    }
 
-    fetchData();
-
-    const ingChannel = supabase
-      .channel("ingredientes-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "ingredientes" }, () => {
-        fetchData();
-      })
-      .subscribe();
-
-    const prodChannel = supabase
-      .channel("productos-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "productos" }, () => {
-        fetchData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(ingChannel);
-      supabase.removeChannel(prodChannel);
-    };
+    setLoading(false);
   }, []);
 
-  const actualizarIngrediente = useCallback(async (id: string, precio: number, cantidad: number) => {
-    const precioUnitario = cantidad > 0 ? precio / cantidad : 0;
-    await supabase.from("ingredientes").update({
-      precio, cantidad, precio_unitario: precioUnitario, updated_at: new Date().toISOString(),
-    }).eq("id", id);
+  useEffect(() => {
+    fetchData();
 
+    const channels = ["ingredientes", "productos", "pedidos"].map(table =>
+      supabase.channel(`${table}-changes`)
+        .on("postgres_changes", { event: "*", schema: "public", table }, () => fetchData())
+        .subscribe()
+    );
+
+    return () => { channels.forEach(c => supabase.removeChannel(c)); };
+  }, [fetchData]);
+
+  const actualizarIngrediente = useCallback(async (id: string, precio: number, cantidad: number, unidad?: string) => {
+    const precioUnitario = cantidad > 0 ? precio / cantidad : 0;
+    const updateData: any = { precio, cantidad, precio_unitario: precioUnitario, updated_at: new Date().toISOString() };
+    if (unidad) updateData.unidad = unidad;
+    await supabase.from("ingredientes").update(updateData).eq("id", id);
+
+    // Recalculate all products using this ingredient
     const { data: allProducts } = await supabase.from("productos").select("*");
     const { data: allIngs } = await supabase.from("ingredientes").select("*");
     if (!allProducts || !allIngs) return;
 
-    const ingMap = new Map(allIngs.map((i: any) => [i.id, Number(i.precio_unitario)]));
+    const ingMap = new Map(allIngs.map((i: any) => [i.id, { pu: Number(i.precio_unitario), unidad: i.unidad }]));
 
     for (const prod of allProducts) {
       const ings = (prod.ingredientes as any[]);
@@ -110,8 +116,9 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
       if (!hasIng) continue;
 
       const updatedIngs = ings.map((ri: any) => {
-        const pu = ingMap.get(ri.ingredienteId) ?? 0;
-        return { ...ri, costo: pu * ri.cantidad };
+        const info = ingMap.get(ri.ingredienteId);
+        const pu = info?.pu ?? 0;
+        return { ...ri, costo: pu * ri.cantidad, unidad: info?.unidad ?? ri.unidad };
       });
       const costoTotal = updatedIngs.reduce((acc: number, ri: any) => acc + ri.costo, 0);
       const oldCostoTotal = Number(prod.costo_total);
@@ -143,24 +150,11 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
   const subirImagenProducto = useCallback(async (productoId: string, file: File): Promise<string> => {
     const ext = file.name.split(".").pop() || "jpg";
     const path = `${productoId}.${ext}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from("product-images")
-      .upload(path, file, { upsert: true });
-    
+    const { error: uploadError } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
     if (uploadError) throw uploadError;
-
-    const { data: urlData } = supabase.storage
-      .from("product-images")
-      .getPublicUrl(path);
-
+    const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
     const imagenUrl = urlData.publicUrl;
-
-    await supabase.from("productos").update({
-      imagen_url: imagenUrl,
-      updated_at: new Date().toISOString(),
-    }).eq("id", productoId);
-
+    await supabase.from("productos").update({ imagen_url: imagenUrl, updated_at: new Date().toISOString() }).eq("id", productoId);
     return imagenUrl;
   }, []);
 
@@ -205,8 +199,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
       nombre: data.nombre, categoria: data.categoria,
       ingredientes: ingredientesReceta, costo_total: costoTotal,
       porciones: [{ nombre: "Unidad", costo: costoUnidad, precio: data.precioVenta, margen }],
-      imagen_url: data.imagenUrl || null,
-      updated_at: new Date().toISOString(),
+      imagen_url: data.imagenUrl || null, updated_at: new Date().toISOString(),
     }).eq("id", id);
   }, []);
 
@@ -214,8 +207,99 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
     await supabase.from("productos").delete().eq("id", id);
   }, []);
 
+  const calcularPedido = useCallback(async (pedidoProductos: { productoId: string; cantidad: number }[]) => {
+    const { data: allProds } = await supabase.from("productos").select("*");
+    if (!allProds) return null;
+
+    const prodMap = new Map(allProds.map((p: any) => [p.id, p]));
+    const ingAcum = new Map<string, { nombre: string; cantidad: number; unidad: string; costo: number }>();
+
+    let costoTotal = 0;
+    let ingresoTotal = 0;
+    const productosDetalle = pedidoProductos.map(pp => {
+      const prod = prodMap.get(pp.productoId);
+      if (!prod) return { productoId: pp.productoId, nombre: "?", cantidad: pp.cantidad, costoUnitario: 0, precioUnitario: 0 };
+      
+      const porciones = prod.porciones as any[];
+      const costoUnitario = porciones[0]?.costo ?? Number(prod.costo_total);
+      const precioUnitario = porciones[0]?.precio ?? 0;
+      costoTotal += costoUnitario * pp.cantidad;
+      ingresoTotal += precioUnitario * pp.cantidad;
+
+      // Accumulate ingredients
+      const recetaIngs = prod.ingredientes as any[];
+      const unidadesReceta = Number(prod.costo_total) > 0 && costoUnitario > 0 ? costoUnitario / (Number(prod.costo_total) / 1) : 1;
+      // unidadesReceta = fraction of full recipe per unit
+      const fraccion = costoUnitario > 0 ? costoUnitario / Number(prod.costo_total) : 1;
+      
+      recetaIngs.forEach((ri: any) => {
+        const cantNecesaria = ri.cantidad * fraccion * pp.cantidad;
+        const costoNecesario = ri.costo * fraccion * pp.cantidad;
+        const key = ri.ingredienteId;
+        const prev = ingAcum.get(key);
+        if (prev) {
+          ingAcum.set(key, { ...prev, cantidad: prev.cantidad + cantNecesaria, costo: prev.costo + costoNecesario });
+        } else {
+          ingAcum.set(key, { nombre: ri.nombre, cantidad: cantNecesaria, unidad: ri.unidad, costo: costoNecesario });
+        }
+      });
+
+      return { productoId: pp.productoId, nombre: prod.nombre, cantidad: pp.cantidad, costoUnitario, precioUnitario };
+    });
+
+    const ingredientesNecesarios = Array.from(ingAcum.entries()).map(([id, v]) => ({
+      ingredienteId: id, ...v,
+    }));
+
+    return { productos: productosDetalle, costoTotal, ingresoTotal, ganancia: ingresoTotal - costoTotal, ingredientesNecesarios };
+  }, []);
+
+  const agregarPedido = useCallback(async (data: NuevoPedido) => {
+    const calculo = await calcularPedido(data.productos);
+    if (!calculo) return;
+
+    await supabase.from("pedidos").insert({
+      fecha_entrega: data.fechaEntrega,
+      productos: calculo.productos,
+      costo_total: calculo.costoTotal,
+      ingreso_total: calculo.ingresoTotal,
+      ganancia: calculo.ganancia,
+      ingredientes_necesarios: calculo.ingredientesNecesarios,
+      notas: data.notas || "",
+    });
+  }, [calcularPedido]);
+
+  const actualizarPedido = useCallback(async (id: string, data: NuevoPedido) => {
+    const calculo = await calcularPedido(data.productos);
+    if (!calculo) return;
+
+    await supabase.from("pedidos").update({
+      fecha_entrega: data.fechaEntrega,
+      productos: calculo.productos,
+      costo_total: calculo.costoTotal,
+      ingreso_total: calculo.ingresoTotal,
+      ganancia: calculo.ganancia,
+      ingredientes_necesarios: calculo.ingredientesNecesarios,
+      notas: data.notas || "",
+      updated_at: new Date().toISOString(),
+    }).eq("id", id);
+  }, [calcularPedido]);
+
+  const eliminarPedido = useCallback(async (id: string) => {
+    await supabase.from("pedidos").delete().eq("id", id);
+  }, []);
+
+  const cambiarEstadoPedido = useCallback(async (id: string, estado: string) => {
+    await supabase.from("pedidos").update({ estado, updated_at: new Date().toISOString() }).eq("id", id);
+  }, []);
+
   return (
-    <IngredientesContext.Provider value={{ ingredientes, productos, loading, agregarIngrediente, actualizarIngrediente, eliminarIngrediente, agregarProducto, actualizarProducto, eliminarProducto, subirImagenProducto }}>
+    <IngredientesContext.Provider value={{
+      ingredientes, productos, pedidos, loading,
+      agregarIngrediente, actualizarIngrediente, eliminarIngrediente,
+      agregarProducto, actualizarProducto, eliminarProducto, subirImagenProducto,
+      agregarPedido, actualizarPedido, eliminarPedido, cambiarEstadoPedido,
+    }}>
       {children}
     </IngredientesContext.Provider>
   );

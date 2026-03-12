@@ -55,7 +55,7 @@ const Ingredientes = () => {
     setGuardando(true);
     try {
       if (editId) {
-        await actualizarIngrediente(editId, p, c);
+        await actualizarIngrediente(editId, p, c, unidad);
         toast.success("Ingrediente actualizado. Costos de productos recalculados.");
       } else {
         await agregarIngrediente({ nombre: nombre.trim(), precio: p, cantidad: c, unidad });
@@ -244,7 +244,6 @@ const Ingredientes = () => {
                 <select
                   value={unidad}
                   onChange={(e) => setUnidad(e.target.value)}
-                  disabled={!!editId}
                   className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   {UNIDADES.map(u => (

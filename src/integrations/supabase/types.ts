@@ -47,6 +47,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pedidos: {
+        Row: {
+          costo_total: number
+          created_at: string
+          estado: string
+          fecha_entrega: string
+          ganancia: number
+          id: string
+          ingredientes_necesarios: Json
+          ingreso_total: number
+          notas: string | null
+          productos: Json
+          updated_at: string
+        }
+        Insert: {
+          costo_total?: number
+          created_at?: string
+          estado?: string
+          fecha_entrega: string
+          ganancia?: number
+          id?: string
+          ingredientes_necesarios?: Json
+          ingreso_total?: number
+          notas?: string | null
+          productos?: Json
+          updated_at?: string
+        }
+        Update: {
+          costo_total?: number
+          created_at?: string
+          estado?: string
+          fecha_entrega?: string
+          ganancia?: number
+          id?: string
+          ingredientes_necesarios?: Json
+          ingreso_total?: number
+          notas?: string | null
+          productos?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       productos: {
         Row: {
           categoria: string
