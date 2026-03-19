@@ -1,0 +1,25 @@
+UPDATE public.productos SET descripcion = CASE id
+  WHEN 'alfajor_almendras' THEN 'Alfajor de textura suave y delicada, elaborado con masa a base de almendras, relleno con dulce de leche y terminado con una cobertura sutil que realza su sabor.'
+  WHEN 'alfajor_maicena' THEN 'Clásico alfajor liviano y esponjoso, con tapas de maicena que se deshacen en la boca, relleno de dulce de leche y bordeado con coco rallado.'
+  WHEN 'cara_sucia' THEN 'Bizcochuelo húmedo de chocolate, intenso y esponjoso, cubierto con una capa de chocolate que le da su característico aspecto y sabor.'
+  WHEN 'rolls_canela' THEN 'Masas tiernas y esponjosas, arrolladas con azúcar y canela, horneadas hasta dorar y terminadas con un suave glaseado.'
+  WHEN 'scon_queso' THEN 'Scones salados, livianos y ligeramente crocantes por fuera, con un interior tierno y sabor pronunciado a queso.'
+  WHEN 'brownie_franui' THEN 'Base densa y húmeda de brownie de chocolate, combinada con toppings dulces y una textura que mezcla lo cremoso con lo crocante.'
+  WHEN 'cheesecake' THEN 'Torta cremosa de queso estilo neoyorquino, con base de galletitas crocantes y un sabor equilibrado entre dulce y ligeramente ácido.'
+  WHEN 'chocotorta' THEN 'Postre clásico argentino, capas de galletitas de chocolate humedecidas con una crema suave de dulce de leche y queso crema.'
+  WHEN 'key_lime_pie' THEN 'Tarta refrescante de lima, con relleno cremoso de sabor ácido y dulce, sobre una base crocante y liviana.'
+  WHEN 'rogel' THEN 'Torta de múltiples capas finas y crocantes, intercaladas con abundante dulce de leche y cubierta con merengue suave.'
+  WHEN 'torta_alemana' THEN 'Torta húmeda y suave, con capas dulces y textura delicada, ideal para quienes buscan un sabor clásico y casero.'
+  WHEN 'torta_nuez' THEN 'Bizcochuelo húmedo con nueces, de sabor intenso y textura ligeramente crocante en su interior.'
+  WHEN 'turron_quaker' THEN 'Postre dulce y crocante a base de avena, chocolate y dulce de leche, con una textura firme y muy sabrosa.'
+  WHEN 'crumble_manzana' THEN 'Tarta de manzanas cocidas y especiadas, cubierta con un crumble crocante y dorado que aporta textura.'
+  WHEN 'lemon_pie' THEN 'Base de masa crocante rellena con crema de limón suave y ácida, coronada con merengue aireado.'
+  WHEN 'sable_almendras' THEN 'Tarta de masa sablée crocante con un delicado sabor a almendras, rellena con una preparación dulce y equilibrada.'
+  WHEN 'tarta_bombn' THEN 'Tarta de chocolate intenso, con relleno cremoso tipo ganache que ofrece una experiencia dulce y profunda.'
+  WHEN 'tarta_frutilla' THEN 'Base crocante rellena con crema suave y cubierta con frutillas frescas, aportando un equilibrio entre dulzor y frescura.'
+  WHEN 'pastafrola_batata' THEN 'Clásica masa dulce con relleno suave y aromático de dulce de batata, con cubierta enrejada.'
+  WHEN 'pastafrola_ddl' THEN 'Versión más indulgente con abundante dulce de leche, combinando una masa tierna con un relleno cremoso.'
+  WHEN 'pastafrola_membrillo' THEN 'Tradicional pastafrola con relleno de membrillo, de sabor dulce y levemente ácido, con masa casera.'
+  ELSE descripcion
+END
+WHERE id IN ('alfajor_almendras','alfajor_maicena','cara_sucia','rolls_canela','scon_queso','brownie_franui','cheesecake','chocotorta','key_lime_pie','rogel','torta_alemana','torta_nuez','turron_quaker','crumble_manzana','lemon_pie','sable_almendras','tarta_bombn','tarta_frutilla','pastafrola_batata','pastafrola_ddl','pastafrola_membrillo')
