@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useIngredientes } from "@/context/IngredientesContext";
 import { formatCurrency, type Producto } from "@/data/productos";
 import { Plus, Trash2, Check, Loader2 } from "lucide-react";
