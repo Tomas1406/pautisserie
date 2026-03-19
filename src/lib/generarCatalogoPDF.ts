@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { type Producto, formatCurrency } from "@/data/productos";
 
+
 const BRAND = {
   primary: [89, 62, 42] as [number, number, number],     // warm brown
   secondary: [163, 143, 120] as [number, number, number], // warm tan
