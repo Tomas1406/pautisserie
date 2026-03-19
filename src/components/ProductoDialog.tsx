@@ -149,6 +149,13 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
             </select>
           </div>
 
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">Descripción (para catálogo)</label>
+            <Textarea value={descripcion} onChange={e => setDescripcion(e.target.value)}
+              placeholder="Descripción del producto para el catálogo..."
+              className="min-h-[60px] text-sm" />
+          </div>
+
           {/* Ingredientes */}
           <div>
             <div className="flex items-center justify-between mb-2">
