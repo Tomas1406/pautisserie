@@ -29,6 +29,7 @@ interface Props {
 const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   const { ingredientes, agregarProducto, actualizarProducto } = useIngredientes();
   const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
   const [categoria, setCategoria] = useState(CATEGORIAS[0]);
   const [lineas, setLineas] = useState<IngredienteLinea[]>([{ ingredienteId: "", cantidad: "" }]);
   const [unidadesPorReceta, setUnidadesPorReceta] = useState("1");
