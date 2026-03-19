@@ -77,6 +77,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
     if (prodRes.data) {
       setProductos(prodRes.data.map((r: any) => ({
         id: r.id, nombre: r.nombre, categoria: r.categoria,
+        descripcion: r.descripcion || "",
         ingredientes: r.ingredientes as any[], costoTotal: Number(r.costo_total),
         unidadesPorReceta: Number(r.unidades_por_receta) || 1,
         porciones: r.porciones as any[], imagenUrl: r.imagen_url || undefined,
