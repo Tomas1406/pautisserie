@@ -103,6 +103,7 @@ export type Database = {
           categoria: string
           costo_total: number
           created_at: string
+          descripcion: string
           id: string
           imagen_url: string | null
           ingredientes: Json
@@ -115,6 +116,7 @@ export type Database = {
           categoria?: string
           costo_total?: number
           created_at?: string
+          descripcion?: string
           id: string
           imagen_url?: string | null
           ingredientes?: Json
@@ -127,6 +129,7 @@ export type Database = {
           categoria?: string
           costo_total?: number
           created_at?: string
+          descripcion?: string
           id?: string
           imagen_url?: string | null
           ingredientes?: Json
