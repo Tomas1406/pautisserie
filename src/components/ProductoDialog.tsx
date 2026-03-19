@@ -100,6 +100,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     const data: any = {
       nombre: nombre.trim(),
       categoria,
+      descripcion: descripcion.trim(),
       ingredientes: ingredientesValidos,
       unidadesPorReceta: upr,
       porciones: porcionesValidas,
