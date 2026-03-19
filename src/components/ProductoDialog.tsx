@@ -53,6 +53,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
       })));
     } else if (open) {
       setNombre("");
+      setDescripcion("");
       setCategoria(CATEGORIAS[0]);
       setLineas([{ ingredienteId: "", cantidad: "" }]);
       setUnidadesPorReceta("1");
