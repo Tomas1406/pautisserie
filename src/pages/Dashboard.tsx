@@ -18,6 +18,21 @@ const Dashboard = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [productoEditar, setProductoEditar] = useState<Producto | null>(null);
   const [subiendoImagen, setSubiendoImagen] = useState<string | null>(null);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
+
+  const handleDescargarCatalogo = async () => {
+    if (productos.length === 0) { toast.error("No hay productos para el catálogo"); return; }
+    setGenerandoPDF(true);
+    try {
+      await generarCatalogoPDF(productos);
+      toast.success("Catálogo descargado");
+    } catch (err: any) {
+      toast.error("Error al generar catálogo");
+      console.error(err);
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
 
   const productosFiltrados = categoriaActiva === "Todas"
     ? productos
