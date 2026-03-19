@@ -39,6 +39,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   useEffect(() => {
     if (open && productoEditar) {
       setNombre(productoEditar.nombre);
+      setDescripcion(productoEditar.descripcion || "");
       setCategoria(productoEditar.categoria);
       setUnidadesPorReceta(productoEditar.unidadesPorReceta.toString());
       setLineas(productoEditar.ingredientes.map(ri => ({
