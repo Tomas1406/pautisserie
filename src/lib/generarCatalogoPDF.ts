@@ -81,25 +81,48 @@ export async function generarCatalogoPDF(productos: Producto[]) {
   doc.setFillColor(...BRAND.primary);
   doc.rect(0, PAGE_H - 8, PAGE_W, 8, "F");
 
+  // ─── Calculate page numbers ───
+  const categorias = [...new Set(productos.map(p => p.categoria))];
+  const totalTocEntries = productos.length + categorias.length;
+  const entriesPerTocPage = Math.floor((PAGE_H - 55 - 30) / 9);
+  const tocPages = Math.max(1, Math.ceil(totalTocEntries / entriesPerTocPage));
+
+  let currentPage = 1 + tocPages;
+  const pageMap = new Map<string, number>();
+  for (const cat of categorias) {
+    currentPage++;
+    const prodsInCat = productos.filter(p => p.categoria === cat);
+    for (const prod of prodsInCat) {
+      currentPage++;
+      pageMap.set(prod.id, currentPage);
+    }
+  }
+
   // ─── Table of Contents ───
   doc.addPage();
   drawPageBg(doc);
   drawHeader(doc, "Índice");
 
-  const categorias = [...new Set(productos.map(p => p.categoria))];
   let tocY = 55;
 
-  doc.setFontSize(12);
   for (const cat of categorias) {
     const prodsInCat = productos.filter(p => p.categoria === cat);
+
+    if (tocY + 16 > PAGE_H - 30) {
+      doc.addPage();
+      drawPageBg(doc);
+      drawHeader(doc, "Índice");
+      tocY = 55;
+    }
+
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
     doc.setTextColor(...BRAND.primary);
     doc.text(cat, MARGIN, tocY);
-    tocY += 7;
+    tocY += 8;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.setTextColor(...BRAND.text);
     for (const prod of prodsInCat) {
       if (tocY > PAGE_H - 30) {
         doc.addPage();
@@ -107,15 +130,23 @@ export async function generarCatalogoPDF(productos: Producto[]) {
         drawHeader(doc, "Índice");
         tocY = 55;
       }
-      const precios = prod.porciones.map(p => `${p.nombre}: ${formatCurrency(p.precio)}`).join(" · ");
-      doc.text(`• ${prod.nombre}`, MARGIN + 5, tocY);
-      doc.setTextColor(...BRAND.muted);
-      doc.text(precios, MARGIN + 10, tocY + 5);
+      const pg = pageMap.get(prod.id) ?? 0;
       doc.setTextColor(...BRAND.text);
-      tocY += 13;
+      doc.text(prod.nombre, MARGIN + 5, tocY);
+      doc.setTextColor(...BRAND.muted);
+      doc.text(pg.toString(), PAGE_W - MARGIN, tocY, { align: "right" });
+      const nameW = doc.getTextWidth(prod.nombre) + MARGIN + 5;
+      const pageNumW = doc.getTextWidth(pg.toString());
+      const dotsStart = nameW + 2;
+      const dotsEnd = PAGE_W - MARGIN - pageNumW - 2;
+      if (dotsEnd > dotsStart) {
+        doc.setTextColor(...BRAND.secondary);
+        const dots = ".".repeat(Math.floor((dotsEnd - dotsStart) / 1.5));
+        doc.text(dots, dotsStart, tocY);
+      }
+      tocY += 9;
     }
     tocY += 4;
-    doc.setFontSize(12);
   }
 
   // ─── Product Pages ───
