@@ -5,6 +5,7 @@ import { type Ingrediente, type Producto, type Pedido, type Orden } from "@/data
 interface NuevoProducto {
   nombre: string;
   categoria: string;
+  descripcion?: string;
   ingredientes: { ingredienteId: string; cantidad: number }[];
   unidadesPorReceta: number;
   porciones: { nombre: string; factorOutput: number; precio: number }[];
