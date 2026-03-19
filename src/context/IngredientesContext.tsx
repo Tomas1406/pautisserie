@@ -5,6 +5,7 @@ import { type Ingrediente, type Producto, type Pedido, type Orden } from "@/data
 interface NuevoProducto {
   nombre: string;
   categoria: string;
+  descripcion?: string;
   ingredientes: { ingredienteId: string; cantidad: number }[];
   unidadesPorReceta: number;
   porciones: { nombre: string; factorOutput: number; precio: number }[];
@@ -76,6 +77,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
     if (prodRes.data) {
       setProductos(prodRes.data.map((r: any) => ({
         id: r.id, nombre: r.nombre, categoria: r.categoria,
+        descripcion: r.descripcion || "",
         ingredientes: r.ingredientes as any[], costoTotal: Number(r.costo_total),
         unidadesPorReceta: Number(r.unidades_por_receta) || 1,
         porciones: r.porciones as any[], imagenUrl: r.imagen_url || undefined,
@@ -211,6 +213,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
 
     await supabase.from("productos").insert({
       id, nombre: data.nombre, categoria: data.categoria,
+      descripcion: data.descripcion || "",
       ingredientes: ingredientesReceta, costo_total: costoTotal,
       unidades_por_receta: data.unidadesPorReceta,
       porciones, imagen_url: data.imagenUrl || null,
@@ -229,6 +232,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
 
     await supabase.from("productos").update({
       nombre: data.nombre, categoria: data.categoria,
+      descripcion: data.descripcion || "",
       ingredientes: ingredientesReceta, costo_total: costoTotal,
       unidades_por_receta: data.unidadesPorReceta,
       porciones, imagen_url: imagenUrl, updated_at: new Date().toISOString(),

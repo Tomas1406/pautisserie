@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useIngredientes } from "@/context/IngredientesContext";
 import { formatCurrency, type Producto } from "@/data/productos";
 import { Plus, Trash2, Check, Loader2 } from "lucide-react";
@@ -28,6 +29,7 @@ interface Props {
 const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   const { ingredientes, agregarProducto, actualizarProducto } = useIngredientes();
   const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
   const [categoria, setCategoria] = useState(CATEGORIAS[0]);
   const [lineas, setLineas] = useState<IngredienteLinea[]>([{ ingredienteId: "", cantidad: "" }]);
   const [unidadesPorReceta, setUnidadesPorReceta] = useState("1");
@@ -37,6 +39,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
   useEffect(() => {
     if (open && productoEditar) {
       setNombre(productoEditar.nombre);
+      setDescripcion(productoEditar.descripcion || "");
       setCategoria(productoEditar.categoria);
       setUnidadesPorReceta(productoEditar.unidadesPorReceta.toString());
       setLineas(productoEditar.ingredientes.map(ri => ({
@@ -50,6 +53,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
       })));
     } else if (open) {
       setNombre("");
+      setDescripcion("");
       setCategoria(CATEGORIAS[0]);
       setLineas([{ ingredienteId: "", cantidad: "" }]);
       setUnidadesPorReceta("1");
@@ -96,6 +100,7 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
     const data: any = {
       nombre: nombre.trim(),
       categoria,
+      descripcion: descripcion.trim(),
       ingredientes: ingredientesValidos,
       unidadesPorReceta: upr,
       porciones: porcionesValidas,
@@ -142,6 +147,13 @@ const ProductoDialog = ({ open, onOpenChange, productoEditar }: Props) => {
               className="w-full px-3 py-2 rounded-lg bg-background text-foreground text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary/30">
               {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">Descripción (para catálogo)</label>
+            <Textarea value={descripcion} onChange={e => setDescripcion(e.target.value)}
+              placeholder="Descripción del producto para el catálogo..."
+              className="min-h-[60px] text-sm" />
           </div>
 
           {/* Ingredientes */}

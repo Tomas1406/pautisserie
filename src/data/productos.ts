@@ -28,6 +28,7 @@ export interface Producto {
   id: string;
   nombre: string;
   categoria: string;
+  descripcion: string;
   ingredientes: RecetaIngrediente[];
   costoTotal: number;
   unidadesPorReceta: number;
