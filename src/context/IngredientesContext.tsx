@@ -232,6 +232,7 @@ export const IngredientesProvider = ({ children }: { children: ReactNode }) => {
 
     await supabase.from("productos").update({
       nombre: data.nombre, categoria: data.categoria,
+      descripcion: data.descripcion || "",
       ingredientes: ingredientesReceta, costo_total: costoTotal,
       unidades_por_receta: data.unidadesPorReceta,
       porciones, imagen_url: imagenUrl, updated_at: new Date().toISOString(),
