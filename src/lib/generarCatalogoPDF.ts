@@ -1,20 +1,20 @@
 import jsPDF from "jspdf";
 import { type Producto, formatCurrency } from "@/data/productos";
-
+import logoUrl from "@/assets/pautisserie-logo.png";
 
 const BRAND = {
-  primary: [89, 62, 42] as [number, number, number],     // warm brown
-  secondary: [163, 143, 120] as [number, number, number], // warm tan
-  bg: [245, 240, 233] as [number, number, number],        // cream
-  text: [50, 38, 28] as [number, number, number],         // dark brown
+  primary: [89, 62, 42] as [number, number, number],
+  secondary: [163, 143, 120] as [number, number, number],
+  bg: [245, 240, 233] as [number, number, number],
+  text: [50, 38, 28] as [number, number, number],
   muted: [130, 110, 90] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
 };
 
-const PAGE_W = 210;
-const PAGE_H = 297;
-const MARGIN = 20;
-const CONTENT_W = PAGE_W - MARGIN * 2;
+const PAGE_W = 297;
+const PAGE_H = 210;
+const MARGIN = 15;
+const HALF_W = PAGE_W / 2;
 
 async function loadImageAsBase64(url: string): Promise<string | null> {
   try {
@@ -32,10 +32,11 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
 }
 
 export async function generarCatalogoPDF(productos: Producto[]) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
-  // Preload all product images
+  // Preload images
   const imageCache = new Map<string, string>();
+  const logoB64 = await loadImageAsBase64(logoUrl);
   for (const prod of productos) {
     if (prod.imagenUrl) {
       const b64 = await loadImageAsBase64(prod.imagenUrl);
@@ -44,123 +45,50 @@ export async function generarCatalogoPDF(productos: Producto[]) {
   }
 
   // ─── Cover Page ───
-  doc.setFillColor(...BRAND.bg);
-  doc.rect(0, 0, PAGE_W, PAGE_H, "F");
-
-  // Decorative top band
+  drawPageBg(doc);
   doc.setFillColor(...BRAND.primary);
-  doc.rect(0, 0, PAGE_W, 8, "F");
+  doc.rect(0, 0, PAGE_W, 6, "F");
+  doc.rect(0, PAGE_H - 6, PAGE_W, 6, "F");
 
-  // Brand name
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(42);
-  doc.setTextColor(...BRAND.primary);
-  doc.text("Pautisserie", PAGE_W / 2, 100, { align: "center" });
+  // Logo
+  if (logoB64) {
+    const logoW = 120;
+    const logoH = 76; // aspect ratio ~800/512
+    doc.addImage(logoB64, "PNG", PAGE_W / 2 - logoW / 2, 40, logoW, logoH);
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(48);
+    doc.setTextColor(...BRAND.primary);
+    doc.text("Pautisserie", PAGE_W / 2, 85, { align: "center" });
+  }
 
   // Subtitle
   doc.setFont("helvetica", "normal");
   doc.setFontSize(16);
   doc.setTextColor(...BRAND.muted);
-  doc.text("Catálogo de Productos", PAGE_W / 2, 115, { align: "center" });
+  doc.text("Catálogo de Productos", PAGE_W / 2, 130, { align: "center" });
 
-  // Decorative line
   doc.setDrawColor(...BRAND.secondary);
   doc.setLineWidth(0.5);
-  doc.line(PAGE_W / 2 - 30, 125, PAGE_W / 2 + 30, 125);
+  doc.line(PAGE_W / 2 - 30, 138, PAGE_W / 2 + 30, 138);
 
-  // Date
-  doc.setFontSize(11);
-  doc.setTextColor(...BRAND.muted);
   const fecha = new Date().toLocaleDateString("es-AR", { year: "numeric", month: "long" });
-  doc.text(fecha, PAGE_W / 2, 138, { align: "center" });
+  doc.setFontSize(11);
+  doc.text(fecha, PAGE_W / 2, 148, { align: "center" });
 
-  // Product count
-  doc.setFontSize(10);
-  doc.text(`${productos.length} productos`, PAGE_W / 2, 148, { align: "center" });
-
-  // Bottom band
-  doc.setFillColor(...BRAND.primary);
-  doc.rect(0, PAGE_H - 8, PAGE_W, 8, "F");
-
-  // ─── Calculate page numbers ───
+  // ─── Product Pages (2 per page) ───
   const categorias = [...new Set(productos.map(p => p.categoria))];
-  const totalTocEntries = productos.length + categorias.length;
-  const entriesPerTocPage = Math.floor((PAGE_H - 55 - 30) / 9);
-  const tocPages = Math.max(1, Math.ceil(totalTocEntries / entriesPerTocPage));
-
-  let currentPage = 1 + tocPages;
-  const pageMap = new Map<string, number>();
-  for (const cat of categorias) {
-    currentPage++;
-    const prodsInCat = productos.filter(p => p.categoria === cat);
-    for (const prod of prodsInCat) {
-      currentPage++;
-      pageMap.set(prod.id, currentPage);
-    }
-  }
-
-  // ─── Table of Contents ───
-  doc.addPage();
-  drawPageBg(doc);
-  drawHeader(doc, "Índice");
-
-  let tocY = 55;
 
   for (const cat of categorias) {
     const prodsInCat = productos.filter(p => p.categoria === cat);
 
-    if (tocY + 16 > PAGE_H - 30) {
-      doc.addPage();
-      drawPageBg(doc);
-      drawHeader(doc, "Índice");
-      tocY = 55;
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(...BRAND.primary);
-    doc.text(cat, MARGIN, tocY);
-    tocY += 8;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    for (const prod of prodsInCat) {
-      if (tocY > PAGE_H - 30) {
-        doc.addPage();
-        drawPageBg(doc);
-        drawHeader(doc, "Índice");
-        tocY = 55;
-      }
-      const pg = pageMap.get(prod.id) ?? 0;
-      doc.setTextColor(...BRAND.text);
-      doc.text(prod.nombre, MARGIN + 5, tocY);
-      doc.setTextColor(...BRAND.muted);
-      doc.text(pg.toString(), PAGE_W - MARGIN, tocY, { align: "right" });
-      const nameW = doc.getTextWidth(prod.nombre) + MARGIN + 5;
-      const pageNumW = doc.getTextWidth(pg.toString());
-      const dotsStart = nameW + 2;
-      const dotsEnd = PAGE_W - MARGIN - pageNumW - 2;
-      if (dotsEnd > dotsStart) {
-        doc.setTextColor(...BRAND.secondary);
-        const dots = ".".repeat(Math.floor((dotsEnd - dotsStart) / 1.5));
-        doc.text(dots, dotsStart, tocY);
-      }
-      tocY += 9;
-    }
-    tocY += 4;
-  }
-
-  // ─── Product Pages ───
-  for (const cat of categorias) {
-    const prodsInCat = productos.filter(p => p.categoria === cat);
-
-    // Category separator page
+    // Category separator
     doc.addPage();
     drawPageBg(doc);
     doc.setFillColor(...BRAND.primary);
-    doc.roundedRect(MARGIN, PAGE_H / 2 - 20, CONTENT_W, 40, 4, 4, "F");
+    doc.roundedRect(MARGIN + 30, PAGE_H / 2 - 18, PAGE_W - (MARGIN + 30) * 2, 36, 4, 4, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(28);
+    doc.setFontSize(30);
     doc.setTextColor(...BRAND.white);
     doc.text(cat, PAGE_W / 2, PAGE_H / 2 + 3, { align: "center" });
     doc.setFont("helvetica", "normal");
@@ -168,81 +96,23 @@ export async function generarCatalogoPDF(productos: Producto[]) {
     doc.setTextColor(...BRAND.bg);
     doc.text(`${prodsInCat.length} producto${prodsInCat.length !== 1 ? "s" : ""}`, PAGE_W / 2, PAGE_H / 2 + 14, { align: "center" });
 
-    for (const prod of prodsInCat) {
+    // Products 2 per page
+    for (let i = 0; i < prodsInCat.length; i += 2) {
       doc.addPage();
       drawPageBg(doc);
       drawFooter(doc);
 
-      let y = MARGIN + 5;
+      // Left product
+      drawProductCard(doc, prodsInCat[i], imageCache, MARGIN, HALF_W - 5);
 
-      // Product image
-      const imgData = imageCache.get(prod.id);
-      if (imgData) {
-        try {
-          const imgSize = 55;
-          const imgX = PAGE_W / 2 - imgSize / 2;
-          // Clip area with rounded rect background
-          doc.setFillColor(...BRAND.white);
-          doc.roundedRect(imgX - 2, y - 2, imgSize + 4, imgSize + 4, 4, 4, "F");
-          doc.addImage(imgData, "JPEG", imgX, y, imgSize, imgSize);
-          y += imgSize + 10;
-        } catch {
-          y += 5;
-        }
-      }
+      // Right product (if exists)
+      if (i + 1 < prodsInCat.length) {
+        // Vertical divider
+        doc.setDrawColor(...BRAND.secondary);
+        doc.setLineWidth(0.3);
+        doc.line(HALF_W, MARGIN + 5, HALF_W, PAGE_H - 20);
 
-      // Product name
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(22);
-      doc.setTextColor(...BRAND.primary);
-      doc.text(prod.nombre, PAGE_W / 2, y, { align: "center" });
-      y += 6;
-
-      // Category badge
-      doc.setFontSize(10);
-      doc.setTextColor(...BRAND.muted);
-      doc.text(prod.categoria, PAGE_W / 2, y, { align: "center" });
-      y += 10;
-
-      // Description
-      if (prod.descripcion) {
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.setTextColor(...BRAND.text);
-        const lines = doc.splitTextToSize(prod.descripcion, CONTENT_W - 20);
-        doc.text(lines, PAGE_W / 2, y, { align: "center", maxWidth: CONTENT_W - 20 });
-        y += lines.length * 5.5 + 8;
-      }
-
-      // Decorative divider
-      doc.setDrawColor(...BRAND.secondary);
-      doc.setLineWidth(0.3);
-      doc.line(MARGIN + 20, y, PAGE_W - MARGIN - 20, y);
-      y += 10;
-
-      // Prices section
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
-      doc.setTextColor(...BRAND.primary);
-      doc.text("Precios", PAGE_W / 2, y, { align: "center" });
-      y += 10;
-
-      for (const por of prod.porciones) {
-        // Price card
-        doc.setFillColor(...BRAND.white);
-        doc.roundedRect(MARGIN + 15, y - 5, CONTENT_W - 30, 18, 3, 3, "F");
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(12);
-        doc.setTextColor(...BRAND.text);
-        doc.text(por.nombre, MARGIN + 22, y + 4);
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.setTextColor(...BRAND.primary);
-        doc.text(formatCurrency(por.precio), PAGE_W - MARGIN - 22, y + 4, { align: "right" });
-
-        y += 22;
+        drawProductCard(doc, prodsInCat[i + 1], imageCache, HALF_W + 5, PAGE_W - MARGIN);
       }
     }
   }
@@ -251,24 +121,101 @@ export async function generarCatalogoPDF(productos: Producto[]) {
   doc.addPage();
   drawPageBg(doc);
   doc.setFillColor(...BRAND.primary);
-  doc.rect(0, 0, PAGE_W, 8, "F");
-  doc.rect(0, PAGE_H - 8, PAGE_W, 8, "F");
+  doc.rect(0, 0, PAGE_W, 6, "F");
+  doc.rect(0, PAGE_H - 6, PAGE_W, 6, "F");
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(28);
-  doc.setTextColor(...BRAND.primary);
-  doc.text("Pautisserie", PAGE_W / 2, PAGE_H / 2 - 10, { align: "center" });
+  if (logoB64) {
+    const logoW = 80;
+    const logoH = 51;
+    doc.addImage(logoB64, "PNG", PAGE_W / 2 - logoW / 2, PAGE_H / 2 - 35, logoW, logoH);
+  }
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(12);
+  doc.setFontSize(13);
   doc.setTextColor(...BRAND.muted);
-  doc.text("¡Gracias por elegirnos!", PAGE_W / 2, PAGE_H / 2 + 5, { align: "center" });
+  doc.text("¡Gracias por elegirnos!", PAGE_W / 2, PAGE_H / 2 + 30, { align: "center" });
 
   doc.setFontSize(9);
-  doc.text(`Catálogo generado el ${new Date().toLocaleDateString("es-AR")}`, PAGE_W / 2, PAGE_H / 2 + 18, { align: "center" });
+  doc.text(`Catálogo generado el ${new Date().toLocaleDateString("es-AR")}`, PAGE_W / 2, PAGE_H / 2 + 42, { align: "center" });
 
-  // Save
   doc.save("Pautisserie_Catalogo.pdf");
+}
+
+function drawProductCard(
+  doc: jsPDF,
+  prod: Producto,
+  imageCache: Map<string, string>,
+  xStart: number,
+  xEnd: number
+) {
+  const cardW = xEnd - xStart;
+  const centerX = xStart + cardW / 2;
+  let y = MARGIN + 5;
+
+  // Product image
+  const imgData = imageCache.get(prod.id);
+  if (imgData) {
+    try {
+      const imgSize = 45;
+      const imgX = centerX - imgSize / 2;
+      doc.setFillColor(...BRAND.white);
+      doc.roundedRect(imgX - 2, y - 2, imgSize + 4, imgSize + 4, 4, 4, "F");
+      doc.addImage(imgData, "JPEG", imgX, y, imgSize, imgSize);
+      y += imgSize + 8;
+    } catch {
+      y += 3;
+    }
+  }
+
+  // Name
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(...BRAND.primary);
+  doc.text(prod.nombre, centerX, y, { align: "center" });
+  y += 5;
+
+  // Category badge
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.muted);
+  doc.text(prod.categoria, centerX, y, { align: "center" });
+  y += 7;
+
+  // Description
+  if (prod.descripcion) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.text);
+    const maxDescW = cardW - 16;
+    const lines = doc.splitTextToSize(prod.descripcion, maxDescW);
+    const limitedLines = lines.slice(0, 4);
+    doc.text(limitedLines, centerX, y, { align: "center", maxWidth: maxDescW });
+    y += limitedLines.length * 4.2 + 6;
+  }
+
+  // Divider
+  doc.setDrawColor(...BRAND.secondary);
+  doc.setLineWidth(0.3);
+  doc.line(xStart + 15, y, xEnd - 15, y);
+  y += 7;
+
+  // Prices
+  for (const por of prod.porciones) {
+    doc.setFillColor(...BRAND.white);
+    doc.roundedRect(xStart + 10, y - 4, cardW - 20, 14, 2, 2, "F");
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...BRAND.text);
+    doc.text(por.nombre, xStart + 16, y + 3);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...BRAND.primary);
+    doc.text(formatCurrency(por.precio), xEnd - 16, y + 3, { align: "right" });
+
+    y += 17;
+  }
 }
 
 function drawPageBg(doc: jsPDF) {
@@ -276,20 +223,11 @@ function drawPageBg(doc: jsPDF) {
   doc.rect(0, 0, PAGE_W, PAGE_H, "F");
 }
 
-function drawHeader(doc: jsPDF, title: string) {
-  doc.setFillColor(...BRAND.primary);
-  doc.rect(0, 0, PAGE_W, 40, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.setTextColor(...BRAND.white);
-  doc.text(title, PAGE_W / 2, 26, { align: "center" });
-}
-
 function drawFooter(doc: jsPDF) {
   doc.setFillColor(...BRAND.primary);
-  doc.rect(0, PAGE_H - 12, PAGE_W, 12, "F");
+  doc.rect(0, PAGE_H - 10, PAGE_W, 10, "F");
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...BRAND.bg);
-  doc.text("Pautisserie · Catálogo de Productos", PAGE_W / 2, PAGE_H - 4, { align: "center" });
+  doc.text("Pautisserie · Catálogo de Productos", PAGE_W / 2, PAGE_H - 3, { align: "center" });
 }
