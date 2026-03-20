@@ -103,9 +103,9 @@ export async function generarCatalogoPDF(productos: Producto[]) {
   doc.rect(0, PAGE_H - 6, PAGE_W, 6, "F");
 
   if (logoB64) {
-    const logoW = 80;
-    const logoH = 51;
-    doc.addImage(logoB64, "PNG", PAGE_W / 2 - logoW / 2, PAGE_H / 2 - 35, logoW, logoH);
+    const logoW = 60;
+    const logoH = 60;
+    doc.addImage(logoB64, "JPEG", PAGE_W / 2 - logoW / 2, PAGE_H / 2 - 40, logoW, logoH);
   }
 
   doc.setFont("helvetica", "normal");
