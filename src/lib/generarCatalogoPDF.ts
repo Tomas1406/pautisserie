@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import { type Producto, formatCurrency } from "@/data/productos";
-import logoUrl from "@/assets/pautisserie-logo.png";
+import logoUrl from "@/assets/logo-pautisserie.jpeg";
 
 const BRAND = {
   primary: [89, 62, 42] as [number, number, number],
