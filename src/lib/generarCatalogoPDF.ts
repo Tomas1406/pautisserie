@@ -52,9 +52,9 @@ export async function generarCatalogoPDF(productos: Producto[]) {
 
   // Logo
   if (logoB64) {
-    const logoW = 120;
-    const logoH = 76; // aspect ratio ~800/512
-    doc.addImage(logoB64, "PNG", PAGE_W / 2 - logoW / 2, 40, logoW, logoH);
+    const logoW = 90;
+    const logoH = 90;
+    doc.addImage(logoB64, "JPEG", PAGE_W / 2 - logoW / 2, 30, logoW, logoH);
   } else {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(48);
