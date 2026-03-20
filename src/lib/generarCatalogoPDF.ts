@@ -76,44 +76,22 @@ export async function generarCatalogoPDF(productos: Producto[]) {
   doc.setFontSize(11);
   doc.text(fecha, PAGE_W / 2, 148, { align: "center" });
 
-  // ─── Product Pages (2 per page) ───
-  const categorias = [...new Set(productos.map(p => p.categoria))];
+  // ─── Product Pages (2 per page, alphabetical) ───
+  const sorted = [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
-  for (const cat of categorias) {
-    const prodsInCat = productos.filter(p => p.categoria === cat);
-
-    // Category separator
+  for (let i = 0; i < sorted.length; i += 2) {
     doc.addPage();
     drawPageBg(doc);
-    doc.setFillColor(...BRAND.primary);
-    doc.roundedRect(MARGIN + 30, PAGE_H / 2 - 18, PAGE_W - (MARGIN + 30) * 2, 36, 4, 4, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(30);
-    doc.setTextColor(...BRAND.white);
-    doc.text(cat, PAGE_W / 2, PAGE_H / 2 + 3, { align: "center" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(...BRAND.bg);
-    doc.text(`${prodsInCat.length} producto${prodsInCat.length !== 1 ? "s" : ""}`, PAGE_W / 2, PAGE_H / 2 + 14, { align: "center" });
+    drawFooter(doc);
 
-    // Products 2 per page
-    for (let i = 0; i < prodsInCat.length; i += 2) {
-      doc.addPage();
-      drawPageBg(doc);
-      drawFooter(doc);
+    drawProductCard(doc, sorted[i], imageCache, MARGIN, HALF_W - 5);
 
-      // Left product
-      drawProductCard(doc, prodsInCat[i], imageCache, MARGIN, HALF_W - 5);
+    if (i + 1 < sorted.length) {
+      doc.setDrawColor(...BRAND.secondary);
+      doc.setLineWidth(0.3);
+      doc.line(HALF_W, MARGIN + 5, HALF_W, PAGE_H - 20);
 
-      // Right product (if exists)
-      if (i + 1 < prodsInCat.length) {
-        // Vertical divider
-        doc.setDrawColor(...BRAND.secondary);
-        doc.setLineWidth(0.3);
-        doc.line(HALF_W, MARGIN + 5, HALF_W, PAGE_H - 20);
-
-        drawProductCard(doc, prodsInCat[i + 1], imageCache, HALF_W + 5, PAGE_W - MARGIN);
-      }
+      drawProductCard(doc, sorted[i + 1], imageCache, HALF_W + 5, PAGE_W - MARGIN);
     }
   }
 
