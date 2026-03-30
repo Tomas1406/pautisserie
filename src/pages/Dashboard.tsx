@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, 
 import { Button } from "@/components/ui/button";
 import ProductoDialog from "@/components/ProductoDialog";
 import ImportProductoDialog from "@/components/ImportProductoDialog";
-import { generarCatalogoPDF } from "@/lib/generarCatalogoPDF";
+import CatalogoSettingsDialog from "@/components/CatalogoSettingsDialog";
 import { toast } from "sonner";
 
 const categorias = ["Todas", "Pastafrolas", "Tartas", "Tortas", "Individuales"];
@@ -18,21 +18,7 @@ const Dashboard = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [productoEditar, setProductoEditar] = useState<Producto | null>(null);
   const [subiendoImagen, setSubiendoImagen] = useState<string | null>(null);
-  const [generandoPDF, setGenerandoPDF] = useState(false);
-
-  const handleDescargarCatalogo = async () => {
-    if (productos.length === 0) { toast.error("No hay productos para el catálogo"); return; }
-    setGenerandoPDF(true);
-    try {
-      await generarCatalogoPDF(productos);
-      toast.success("Catálogo descargado");
-    } catch (err: any) {
-      toast.error("Error al generar catálogo");
-      console.error(err);
-    } finally {
-      setGenerandoPDF(false);
-    }
-  };
+  const [catalogoDialogOpen, setCatalogoDialogOpen] = useState(false);
 
   const productosFiltrados = categoriaActiva === "Todas"
     ? productos
