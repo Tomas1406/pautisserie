@@ -2,29 +2,19 @@ import jsPDF from "jspdf";
 import { type Producto, formatCurrency } from "@/data/productos";
 import logoUrl from "@/assets/logo-pautisserie.jpeg";
 
-type RGB = [number, number, number];
-
-export interface CatalogConfig {
-  primaryColor?: RGB;
-  secondaryColor?: RGB;
-  coverImageB64?: string | null;
-  aiDescriptions?: Map<string, { description: string; highlight: string; badge: string | null }>;
-}
-
-const DEFAULT_BRAND = {
-  primary: [89, 62, 42] as RGB,
-  secondary: [163, 143, 120] as RGB,
-  bg: [245, 240, 233] as RGB,
-  text: [50, 38, 28] as RGB,
-  muted: [130, 110, 90] as RGB,
-  white: [255, 255, 255] as RGB,
+const BRAND = {
+  primary: [89, 62, 42] as [number, number, number],
+  secondary: [163, 143, 120] as [number, number, number],
+  bg: [245, 240, 233] as [number, number, number],
+  text: [50, 38, 28] as [number, number, number],
+  muted: [130, 110, 90] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
 };
 
 const PAGE_W = 297;
 const PAGE_H = 210;
-const MARGIN = 12;
+const MARGIN = 15;
 const HALF_W = PAGE_W / 2;
-const HALF_H = PAGE_H / 2;
 
 async function loadImageAsBase64(url: string): Promise<string | null> {
   try {
@@ -41,14 +31,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   }
 }
 
-export async function generarCatalogoPDF(productos: Producto[], config?: CatalogConfig) {
-  const BRAND = {
-    ...DEFAULT_BRAND,
-    primary: config?.primaryColor || DEFAULT_BRAND.primary,
-    secondary: config?.secondaryColor || DEFAULT_BRAND.secondary,
-  };
-  const aiMap = config?.aiDescriptions || new Map();
-
+export async function generarCatalogoPDF(productos: Producto[]) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
   // Preload images
@@ -62,109 +45,76 @@ export async function generarCatalogoPDF(productos: Producto[], config?: Catalog
   }
 
   // ─── Cover Page ───
-  if (config?.coverImageB64) {
-    try {
-      doc.addImage(config.coverImageB64, "JPEG", 0, 0, PAGE_W, PAGE_H);
-      // Dark overlay
-      doc.setFillColor(0, 0, 0);
-      doc.setGState(new (doc as any).GState({ opacity: 0.55 }));
-      doc.rect(0, 0, PAGE_W, PAGE_H, "F");
-      doc.setGState(new (doc as any).GState({ opacity: 1 }));
-    } catch {
-      drawBg(doc, BRAND.bg);
-    }
-  } else {
-    drawBg(doc, BRAND.bg);
-    // Decorative bars
-    doc.setFillColor(...BRAND.primary);
-    doc.rect(0, 0, PAGE_W, 6, "F");
-    doc.rect(0, PAGE_H - 6, PAGE_W, 6, "F");
-  }
+  drawPageBg(doc);
+  doc.setFillColor(...BRAND.primary);
+  doc.rect(0, 0, PAGE_W, 6, "F");
+  doc.rect(0, PAGE_H - 6, PAGE_W, 6, "F");
 
-  // Logo on cover
+  // Logo
   if (logoB64) {
-    const logoW = 80;
-    const logoH = 80;
-    doc.addImage(logoB64, "JPEG", PAGE_W / 2 - logoW / 2, 25, logoW, logoH);
+    const logoW = 90;
+    const logoH = 90;
+    doc.addImage(logoB64, "JPEG", PAGE_W / 2 - logoW / 2, 30, logoW, logoH);
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(48);
+    doc.setTextColor(...BRAND.primary);
+    doc.text("Pautisserie", PAGE_W / 2, 85, { align: "center" });
   }
 
-  // Title
-  const titleColor: RGB = config?.coverImageB64 ? [255, 255, 255] : BRAND.primary;
-  const subtitleColor: RGB = config?.coverImageB64 ? [220, 220, 220] : BRAND.muted;
-
+  // Subtitle
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(14);
-  doc.setTextColor(...subtitleColor);
-  doc.text("Catálogo de Productos", PAGE_W / 2, 118, { align: "center" });
+  doc.setFontSize(16);
+  doc.setTextColor(...BRAND.muted);
+  doc.text("Catálogo de Productos", PAGE_W / 2, 130, { align: "center" });
 
-  doc.setDrawColor(...(config?.coverImageB64 ? [255, 255, 255] as RGB : BRAND.secondary));
+  doc.setDrawColor(...BRAND.secondary);
   doc.setLineWidth(0.5);
-  doc.line(PAGE_W / 2 - 25, 125, PAGE_W / 2 + 25, 125);
+  doc.line(PAGE_W / 2 - 30, 138, PAGE_W / 2 + 30, 138);
 
   const fecha = new Date().toLocaleDateString("es-AR", { year: "numeric", month: "long" });
   doc.setFontSize(11);
-  doc.setTextColor(...subtitleColor);
-  doc.text(fecha, PAGE_W / 2, 133, { align: "center" });
+  doc.text(fecha, PAGE_W / 2, 148, { align: "center" });
 
-  // Product count
-  doc.setFontSize(9);
-  doc.text(`${productos.length} productos`, PAGE_W / 2, 142, { align: "center" });
-
-  // ─── Product Pages (4 per page in 2x2 grid, alphabetical) ───
+  // ─── Product Pages (2 per page, alphabetical) ───
   const sorted = [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
-  for (let i = 0; i < sorted.length; i += 4) {
+  for (let i = 0; i < sorted.length; i += 2) {
     doc.addPage();
-    drawBg(doc, BRAND.bg);
-    drawFooter(doc, BRAND);
+    drawPageBg(doc);
+    drawFooter(doc);
 
-    // Top-left
-    drawProductCard(doc, sorted[i], imageCache, aiMap, BRAND, MARGIN, HALF_W - 3, MARGIN, HALF_H - 8);
+    drawProductCard(doc, sorted[i], imageCache, MARGIN, HALF_W - 5);
 
-    // Top-right
     if (i + 1 < sorted.length) {
-      drawProductCard(doc, sorted[i + 1], imageCache, aiMap, BRAND, HALF_W + 3, PAGE_W - MARGIN, MARGIN, HALF_H - 8);
-    }
+      doc.setDrawColor(...BRAND.secondary);
+      doc.setLineWidth(0.3);
+      doc.line(HALF_W, MARGIN + 5, HALF_W, PAGE_H - 20);
 
-    // Horizontal divider
-    doc.setDrawColor(...BRAND.secondary);
-    doc.setLineWidth(0.2);
-    doc.line(MARGIN + 5, HALF_H - 3, PAGE_W - MARGIN - 5, HALF_H - 3);
-
-    // Vertical divider
-    doc.line(HALF_W, MARGIN + 5, HALF_W, PAGE_H - 18);
-
-    // Bottom-left
-    if (i + 2 < sorted.length) {
-      drawProductCard(doc, sorted[i + 2], imageCache, aiMap, BRAND, MARGIN, HALF_W - 3, HALF_H + 2, PAGE_H - 15);
-    }
-
-    // Bottom-right
-    if (i + 3 < sorted.length) {
-      drawProductCard(doc, sorted[i + 3], imageCache, aiMap, BRAND, HALF_W + 3, PAGE_W - MARGIN, HALF_H + 2, PAGE_H - 15);
+      drawProductCard(doc, sorted[i + 1], imageCache, HALF_W + 5, PAGE_W - MARGIN);
     }
   }
 
   // ─── Back Cover ───
   doc.addPage();
-  drawBg(doc, BRAND.bg);
+  drawPageBg(doc);
   doc.setFillColor(...BRAND.primary);
   doc.rect(0, 0, PAGE_W, 6, "F");
   doc.rect(0, PAGE_H - 6, PAGE_W, 6, "F");
 
   if (logoB64) {
-    const logoW = 55;
-    const logoH = 55;
-    doc.addImage(logoB64, "JPEG", PAGE_W / 2 - logoW / 2, PAGE_H / 2 - 38, logoW, logoH);
+    const logoW = 60;
+    const logoH = 60;
+    doc.addImage(logoB64, "JPEG", PAGE_W / 2 - logoW / 2, PAGE_H / 2 - 40, logoW, logoH);
   }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(13);
   doc.setTextColor(...BRAND.muted);
-  doc.text("¡Gracias por elegirnos!", PAGE_W / 2, PAGE_H / 2 + 28, { align: "center" });
+  doc.text("¡Gracias por elegirnos!", PAGE_W / 2, PAGE_H / 2 + 30, { align: "center" });
 
   doc.setFontSize(9);
-  doc.text(`Catálogo generado el ${new Date().toLocaleDateString("es-AR")}`, PAGE_W / 2, PAGE_H / 2 + 40, { align: "center" });
+  doc.text(`Catálogo generado el ${new Date().toLocaleDateString("es-AR")}`, PAGE_W / 2, PAGE_H / 2 + 42, { align: "center" });
 
   doc.save("Pautisserie_Catalogo.pdf");
 }
@@ -173,108 +123,85 @@ function drawProductCard(
   doc: jsPDF,
   prod: Producto,
   imageCache: Map<string, string>,
-  aiMap: Map<string, { description: string; highlight: string; badge: string | null }>,
-  BRAND: typeof DEFAULT_BRAND,
   xStart: number,
-  xEnd: number,
-  yStart: number,
-  yEnd: number
+  xEnd: number
 ) {
   const cardW = xEnd - xStart;
-  const cardH = yEnd - yStart;
   const centerX = xStart + cardW / 2;
-  const ai = aiMap.get(prod.id);
-  let y = yStart + 3;
-
-  // Badge
-  if (ai?.badge) {
-    const badgeW = doc.getTextWidth(ai.badge) + 8;
-    doc.setFillColor(...BRAND.secondary);
-    doc.roundedRect(centerX - badgeW / 2, y - 1, badgeW, 5, 2, 2, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(6.5);
-    doc.setTextColor(...BRAND.white);
-    doc.text(ai.badge, centerX, y + 2.8, { align: "center" });
-    y += 7;
-  }
+  let y = MARGIN + 5;
 
   // Product image
   const imgData = imageCache.get(prod.id);
   if (imgData) {
     try {
-      const imgSize = Math.min(32, cardH * 0.35);
+      const imgSize = 45;
       const imgX = centerX - imgSize / 2;
       doc.setFillColor(...BRAND.white);
-      doc.roundedRect(imgX - 1.5, y - 1.5, imgSize + 3, imgSize + 3, 3, 3, "F");
+      doc.roundedRect(imgX - 2, y - 2, imgSize + 4, imgSize + 4, 4, 4, "F");
       doc.addImage(imgData, "JPEG", imgX, y, imgSize, imgSize);
-      y += imgSize + 4;
+      y += imgSize + 8;
     } catch {
-      y += 2;
+      y += 3;
     }
   }
 
   // Name
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
+  doc.setFontSize(16);
   doc.setTextColor(...BRAND.primary);
-  const nameLines = doc.splitTextToSize(prod.nombre, cardW - 10);
-  doc.text(nameLines.slice(0, 1), centerX, y, { align: "center" });
-  y += 4;
+  doc.text(prod.nombre, centerX, y, { align: "center" });
+  y += 5;
 
-  // Highlight
-  if (ai?.highlight) {
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(7);
-    doc.setTextColor(...BRAND.secondary);
-    doc.text(ai.highlight, centerX, y, { align: "center" });
-    y += 4;
-  }
+  // Category badge
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...BRAND.muted);
+  doc.text(prod.categoria, centerX, y, { align: "center" });
+  y += 7;
 
-  // Description (AI or stored)
-  const desc = ai?.description || prod.descripcion;
-  if (desc) {
+  // Description
+  if (prod.descripcion) {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(9);
     doc.setTextColor(...BRAND.text);
-    const maxDescW = cardW - 12;
-    const lines = doc.splitTextToSize(desc, maxDescW);
-    const maxLines = imgData ? 2 : 3;
-    doc.text(lines.slice(0, maxLines), centerX, y, { align: "center", maxWidth: maxDescW });
-    y += Math.min(lines.length, maxLines) * 3.2 + 3;
+    const maxDescW = cardW - 16;
+    const lines = doc.splitTextToSize(prod.descripcion, maxDescW);
+    const limitedLines = lines.slice(0, 4);
+    doc.text(limitedLines, centerX, y, { align: "center", maxWidth: maxDescW });
+    y += limitedLines.length * 4.2 + 6;
   }
 
   // Divider
   doc.setDrawColor(...BRAND.secondary);
-  doc.setLineWidth(0.2);
-  doc.line(xStart + 10, y, xEnd - 10, y);
-  y += 4;
+  doc.setLineWidth(0.3);
+  doc.line(xStart + 15, y, xEnd - 15, y);
+  y += 7;
 
-  // Prices (compact)
-  const maxPrices = Math.min(prod.porciones.length, 3);
-  for (let i = 0; i < maxPrices; i++) {
-    const por = prod.porciones[i];
-    if (y + 8 > yEnd) break;
+  // Prices
+  for (const por of prod.porciones) {
+    doc.setFillColor(...BRAND.white);
+    doc.roundedRect(xStart + 10, y - 4, cardW - 20, 14, 2, 2, "F");
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
+    doc.setFontSize(10);
     doc.setTextColor(...BRAND.text);
-    doc.text(por.nombre, xStart + 8, y + 2);
+    doc.text(por.nombre, xStart + 16, y + 3);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
+    doc.setFontSize(11);
     doc.setTextColor(...BRAND.primary);
-    doc.text(formatCurrency(por.precio), xEnd - 8, y + 2, { align: "right" });
+    doc.text(formatCurrency(por.precio), xEnd - 16, y + 3, { align: "right" });
 
-    y += 8;
+    y += 17;
   }
 }
 
-function drawBg(doc: jsPDF, color: RGB) {
-  doc.setFillColor(...color);
+function drawPageBg(doc: jsPDF) {
+  doc.setFillColor(...BRAND.bg);
   doc.rect(0, 0, PAGE_W, PAGE_H, "F");
 }
 
-function drawFooter(doc: jsPDF, BRAND: typeof DEFAULT_BRAND) {
+function drawFooter(doc: jsPDF) {
   doc.setFillColor(...BRAND.primary);
   doc.rect(0, PAGE_H - 10, PAGE_W, 10, "F");
   doc.setFont("helvetica", "normal");

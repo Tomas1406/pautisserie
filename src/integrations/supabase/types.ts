@@ -14,24 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      catalogo_config: {
-        Row: {
-          id: string
-          state: Json
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          state?: Json
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          state?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
       ingredientes: {
         Row: {
           cantidad: number

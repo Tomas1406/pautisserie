@@ -1,12 +1,11 @@
 import { useState, useRef } from "react";
 import { formatCurrency, type Producto } from "@/data/productos";
 import { useIngredientes } from "@/context/IngredientesContext";
-import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, Trash2, Loader2, ImagePlus, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, Trash2, Loader2, ImagePlus, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductoDialog from "@/components/ProductoDialog";
 import ImportProductoDialog from "@/components/ImportProductoDialog";
-import CatalogoEditor from "@/components/catalogo/CatalogoEditor";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { generarCatalogoPDF } from "@/lib/generarCatalogoPDF";
 import { toast } from "sonner";
 
 const categorias = ["Todas", "Pastafrolas", "Tartas", "Tortas", "Individuales"];
@@ -19,7 +18,21 @@ const Dashboard = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [productoEditar, setProductoEditar] = useState<Producto | null>(null);
   const [subiendoImagen, setSubiendoImagen] = useState<string | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
+
+  const handleDescargarCatalogo = async () => {
+    if (productos.length === 0) { toast.error("No hay productos para el catálogo"); return; }
+    setGenerandoPDF(true);
+    try {
+      await generarCatalogoPDF(productos);
+      toast.success("Catálogo descargado");
+    } catch (err: any) {
+      toast.error("Error al generar catálogo");
+      console.error(err);
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
 
   const productosFiltrados = categoriaActiva === "Todas"
     ? productos
@@ -95,8 +108,8 @@ const Dashboard = () => {
             </button>
           ))}
         </div>
-        <Button onClick={() => setEditorOpen(true)} size="icon" variant="outline" className="rounded-xl h-[38px] w-[38px] shrink-0" title="Editar catálogo con IA">
-          <Sparkles className="w-5 h-5" />
+        <Button onClick={handleDescargarCatalogo} size="icon" variant="outline" className="rounded-xl h-[38px] w-[38px] shrink-0" title="Descargar catálogo PDF" disabled={generandoPDF}>
+          {generandoPDF ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
         </Button>
         <Button onClick={() => setImportDialogOpen(true)} size="icon" variant="outline" className="rounded-xl h-[38px] w-[38px] shrink-0" title="Importar receta">
           <ImagePlus className="w-5 h-5" />
@@ -124,12 +137,6 @@ const Dashboard = () => {
 
       <ProductoDialog open={dialogOpen} onOpenChange={setDialogOpen} productoEditar={productoEditar} />
       <ImportProductoDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
-
-      <Sheet open={editorOpen} onOpenChange={setEditorOpen}>
-        <SheetContent side="bottom" className="h-[95vh] p-4 overflow-hidden">
-          <CatalogoEditor />
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };
