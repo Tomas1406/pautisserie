@@ -19,7 +19,7 @@ const Dashboard = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [productoEditar, setProductoEditar] = useState<Producto | null>(null);
   const [subiendoImagen, setSubiendoImagen] = useState<string | null>(null);
-  const [catalogoDialogOpen, setCatalogoDialogOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const productosFiltrados = categoriaActiva === "Todas"
     ? productos
