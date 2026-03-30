@@ -95,8 +95,8 @@ const Dashboard = () => {
             </button>
           ))}
         </div>
-        <Button onClick={handleDescargarCatalogo} size="icon" variant="outline" className="rounded-xl h-[38px] w-[38px] shrink-0" title="Descargar catálogo PDF" disabled={generandoPDF}>
-          {generandoPDF ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+        <Button onClick={() => setEditorOpen(true)} size="icon" variant="outline" className="rounded-xl h-[38px] w-[38px] shrink-0" title="Editar catálogo con IA">
+          <Sparkles className="w-5 h-5" />
         </Button>
         <Button onClick={() => setImportDialogOpen(true)} size="icon" variant="outline" className="rounded-xl h-[38px] w-[38px] shrink-0" title="Importar receta">
           <ImagePlus className="w-5 h-5" />
