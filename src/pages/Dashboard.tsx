@@ -124,6 +124,12 @@ const Dashboard = () => {
 
       <ProductoDialog open={dialogOpen} onOpenChange={setDialogOpen} productoEditar={productoEditar} />
       <ImportProductoDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
+
+      <Sheet open={editorOpen} onOpenChange={setEditorOpen}>
+        <SheetContent side="bottom" className="h-[95vh] p-4 overflow-hidden">
+          <CatalogoEditor />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
