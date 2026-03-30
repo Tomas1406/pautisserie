@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp, Package, DollarSign, TrendingUp, Plus, Pencil, 
 import { Button } from "@/components/ui/button";
 import ProductoDialog from "@/components/ProductoDialog";
 import ImportProductoDialog from "@/components/ImportProductoDialog";
-import { generarCatalogoPDF } from "@/lib/generarCatalogoPDF";
+import CatalogoSettingsDialog from "@/components/CatalogoSettingsDialog";
 import { toast } from "sonner";
 
 const categorias = ["Todas", "Pastafrolas", "Tartas", "Tortas", "Individuales"];
